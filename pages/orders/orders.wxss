@@ -148,28 +148,49 @@ page {
 /* 订单操作 - 淘宝风格 */
 .order-actions {
   display: flex;
-  gap: 16rpx;
+  gap: 12rpx;
   padding-top: 20rpx;
   border-top: 1rpx solid #e8e8e8;
+  flex-wrap: wrap;
 }
 
 .action-btn {
   flex: 1;
+  min-width: 140rpx;
   text-align: center;
-  padding: 20rpx;
+  padding: 18rpx 12rpx;
   border-radius: 50rpx;
-  font-size: 28rpx;
+  font-size: 26rpx;
   background-color: #ffffff;
   color: #666666;
   border: 1rpx solid #e0e0e0;
   transition: all 0.2s;
   font-weight: 500;
-  letter-spacing: 1rpx;
 }
 
 .action-btn:active {
   transform: scale(0.96);
   background-color: #f5f5f5;
+}
+
+.action-btn.export {
+  color: #1890ff;
+  border-color: #91d5ff;
+  background-color: #e6f7ff;
+}
+
+.action-btn.export:active {
+  background-color: #bae7ff;
+}
+
+.action-btn.share {
+  color: #52c41a;
+  border-color: #b7eb8f;
+  background-color: #f6ffed;
+}
+
+.action-btn.share:active {
+  background-color: #d9f7be;
 }
 
 .action-btn.delete {
@@ -251,4 +272,12 @@ page {
 .clear-all-btn:active {
   transform: scale(0.98);
   box-shadow: 0 2rpx 12rpx rgba(255, 77, 79, 0.4);
+}
+
+/* 隐藏Canvas */
+.order-canvas {
+  position: fixed;
+  top: -9999rpx;
+  left: -9999rpx;
+  z-index: -1;
 }

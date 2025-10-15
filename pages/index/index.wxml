@@ -3,7 +3,7 @@
   <!-- 顶部导航栏 -->
   <view class="top-bar">
     <view class="top-left">
-      <text class="page-title">🌾 大米商城</text>
+      <text class="page-title">🌾 林龍香大米商城</text>
       <text class="restore-btn" bindtap="restoreDefaultProducts">恢复默认</text>
     </view>
     <view class="add-product-btn" bindtap="showAddRiceDialog">

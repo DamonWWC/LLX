@@ -42,8 +42,14 @@
         <view class="action-btn" bindtap="viewOrderDetail" data-orderid="{{item.id}}">
           <text>查看详情</text>
         </view>
+        <view class="action-btn export" bindtap="exportOrderImage" data-orderid="{{item.id}}">
+          <text>📥 导出</text>
+        </view>
+        <view class="action-btn share" bindtap="shareOrder" data-orderid="{{item.id}}">
+          <text>📤 分享</text>
+        </view>
         <view class="action-btn delete" bindtap="deleteOrder" data-orderid="{{item.id}}">
-          <text>删除订单</text>
+          <text>删除</text>
         </view>
       </view>
     </view>
@@ -63,5 +69,13 @@
       <text>清空所有订单</text>
     </button>
   </view>
+
+  <!-- 隐藏的Canvas用于生成订单图片 -->
+  <canvas 
+    type="2d" 
+    id="orderCanvas" 
+    class="order-canvas"
+    style="width: {{canvasWidth}}px; height: {{canvasHeight}}px;"
+  ></canvas>
 </view>
 

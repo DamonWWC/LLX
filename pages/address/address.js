@@ -434,17 +434,41 @@ Page({
     const address = this.data.addressList.find(item => item.id === id)
 
     if (address) {
-      // 返回上一页并传递选中的地址
-      const pages = getCurrentPages()
-      const prevPage = pages[pages.length - 2]
-      
-      if (prevPage) {
-        prevPage.setData({
-          selectedAddress: address
+      try {
+        // 更新本地存储中的结算数据（关键修复）
+        const checkoutData = wx.getStorageSync('checkoutData')
+        if (checkoutData) {
+          checkoutData.selectedAddress = address
+          wx.setStorageSync('checkoutData', checkoutData)
+          console.log('已更新结算数据中的地址:', address)
+        }
+
+        // 同时更新上一个页面的数据（保持兼容）
+        const pages = getCurrentPages()
+        const prevPage = pages[pages.length - 2]
+        
+        if (prevPage) {
+          prevPage.setData({
+            selectedAddress: address
+          })
+        }
+
+        wx.showToast({
+          title: '地址已选择',
+          icon: 'success',
+          duration: 1000
+        })
+
+        setTimeout(() => {
+          wx.navigateBack()
+        }, 500)
+      } catch (error) {
+        console.error('选择地址失败:', error)
+        wx.showToast({
+          title: '选择失败，请重试',
+          icon: 'none'
         })
       }
-
-      wx.navigateBack()
     }
   }
 })

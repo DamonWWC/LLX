@@ -1,0 +1,74 @@
+<!--pages/checkout/checkout.wxml-->
+<view class="checkout-container">
+  <!-- 主要内容 -->
+  <view class="checkout-content">
+    <!-- 收货地址 -->
+    <view class="address-section" bindtap="selectAddress">
+      <view class="address-header-row">
+        <text class="address-title">📍 收货地址</text>
+        <text class="address-action">{{selectedAddress ? '更换' : '选择'}} ></text>
+      </view>
+      <view class="address-content" wx:if="{{selectedAddress}}">
+        <view class="address-info-row">
+          <text class="address-name">{{selectedAddress.name}}</text>
+          <text class="address-phone">{{selectedAddress.phone}}</text>
+        </view>
+        <view class="address-detail-text">
+          {{selectedAddress.province}} {{selectedAddress.city}} {{selectedAddress.district}} {{selectedAddress.detail}}
+        </view>
+      </view>
+      <view class="address-empty" wx:else>
+        <text class="empty-hint-text">请选择收货地址</text>
+      </view>
+    </view>
+
+    <view class="divider"></view>
+
+    <!-- 已选商品明细 -->
+    <view class="products-section">
+      <view class="section-title">商品明细</view>
+      <view class="product-item" wx:for="{{selectedProducts}}" wx:key="id">
+        <view class="product-name">{{item.name}} × {{item.quantity}}</view>
+        <view class="product-price">¥{{item.subtotal}}</view>
+      </view>
+    </view>
+
+    <view class="divider"></view>
+
+    <!-- 汇总信息 -->
+    <view class="summary-section">
+      <view class="summary-row">
+        <text class="summary-label">商品总价</text>
+        <text class="summary-value">¥{{totalRicePrice}}</text>
+      </view>
+      <view class="summary-row">
+        <text class="summary-label">运费总计</text>
+        <text class="summary-value">¥{{totalShipping}}</text>
+      </view>
+      <view class="summary-row total">
+        <text class="summary-label">应付总额</text>
+        <text class="summary-value grand">¥{{grandTotal}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 底部提交按钮 -->
+  <view class="submit-bar">
+    <view class="total-info">
+      <text class="total-label">合计：</text>
+      <text class="total-price">¥{{grandTotal}}</text>
+    </view>
+    <button class="submit-btn" bindtap="confirmOrder">
+      提交订单
+    </button>
+  </view>
+
+  <!-- 隐藏的Canvas用于生成图片（如需要） -->
+  <canvas 
+    type="2d" 
+    id="resultCanvas" 
+    class="result-canvas"
+    style="width: {{canvasWidth}}px; height: {{canvasHeight}}px;"
+  ></canvas>
+</view>
+

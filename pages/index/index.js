@@ -81,12 +81,34 @@ Page({
     try {
       const savedProducts = wx.getStorageSync('riceProducts')
       if (savedProducts && savedProducts.length > 0) {
+        // 修复旧的外部图片链接为SVG data URI
+        const fixedProducts = savedProducts.map(product => {
+          if (product.image && product.image.includes('via.placeholder.com')) {
+            console.log('修复旧图片链接:', product.name)
+            // 根据商品名称使用不同的SVG占位图
+            const colorMap = {
+              '东北大米': { bg: '%23E8F5E9', fg: '%234CAF50' },
+              '泰国香米': { bg: '%23FFF3E0', fg: '%23FF9800' },
+              '五常稻花香': { bg: '%23FCE4EC', fg: '%23E91E63' }
+            }
+            const colors = colorMap[product.name] || { bg: '%23F5F5F5', fg: '%239E9E9E' }
+            product.image = `data:image/svg+xml,%3Csvg width="300" height="300" xmlns="http://www.w3.org/2000/svg"%3E%3Crect width="300" height="300" fill="${colors.bg}"/%3E%3Ctext x="50%25" y="50%25" font-size="80" fill="${colors.fg}" text-anchor="middle" dy=".3em"%3E🌾%3C/text%3E%3C/svg%3E`
+          }
+          return product
+        })
+        
+        // 保存修复后的数据
+        if (fixedProducts.some((p, i) => p.image !== savedProducts[i].image)) {
+          this.saveLocalData(fixedProducts)
+          console.log('已修复并保存商品图片链接')
+        }
+        
         // 加载保存的商品数据
         this.setData({
-          riceProducts: savedProducts,
+          riceProducts: fixedProducts,
           isEmpty: false
         })
-        console.log('成功加载本地商品数据', savedProducts.length, '个商品')
+        console.log('成功加载本地商品数据', fixedProducts.length, '个商品')
       } else {
         // 没有保存的数据，使用默认商品
         const defaultProducts = this.getDefaultProducts()
@@ -351,7 +373,7 @@ Page({
     })
   },
 
-  // 去结算 - 跳转到地址选择
+  // 去结算 - 跳转到结算页面
   goCheckout() {
     const { riceProducts, totalQuantity, selectedAddress } = this.data
 
@@ -384,19 +406,30 @@ Page({
 
     const grandTotal = totalRicePrice + totalShipping
 
-    this.setData({
-      showResult: true,
+    // 将结算数据保存到本地存储
+    const checkoutData = {
       selectedProducts: selectedProducts,
       totalRicePrice: totalRicePrice.toFixed(2),
       totalShipping: totalShipping.toFixed(2),
-      grandTotal: grandTotal.toFixed(2)
-    })
+      grandTotal: grandTotal.toFixed(2),
+      selectedAddress: selectedAddress
+    }
 
-    // 滚动到结果区域（显示地址和结算按钮）
-    wx.pageScrollTo({
-      selector: '.result-section',
-      duration: 300
-    })
+    try {
+      wx.setStorageSync('checkoutData', checkoutData)
+      console.log('结算数据已保存', checkoutData)
+      
+      // 跳转到结算页面
+      wx.navigateTo({
+        url: '/pages/checkout/checkout'
+      })
+    } catch (error) {
+      console.error('保存结算数据失败', error)
+      wx.showToast({
+        title: '跳转失败，请重试',
+        icon: 'none'
+      })
+    }
   },
 
   // 选择收货地址

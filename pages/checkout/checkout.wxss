@@ -1,0 +1,236 @@
+/* pages/checkout/checkout.wxss */
+page {
+  background-color: #f7f8fa;
+  height: 100vh;
+}
+
+.checkout-container {
+  min-height: 100vh;
+  padding-bottom: 120rpx;
+}
+
+/* 主要内容 */
+.checkout-content {
+  padding: 20rpx;
+}
+
+/* 收货地址 */
+.address-section {
+  background-color: #ffffff;
+  border-radius: 16rpx;
+  padding: 32rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
+}
+
+.address-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24rpx;
+}
+
+.address-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333333;
+}
+
+.address-action {
+  font-size: 28rpx;
+  color: #ff6034;
+  font-weight: 500;
+}
+
+.address-content {
+  padding: 20rpx 0;
+}
+
+.address-info-row {
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+  margin-bottom: 16rpx;
+}
+
+.address-name {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333333;
+}
+
+.address-phone {
+  font-size: 28rpx;
+  color: #666666;
+}
+
+.address-detail-text {
+  font-size: 28rpx;
+  color: #999999;
+  line-height: 1.6;
+}
+
+.address-empty {
+  padding: 40rpx 0;
+  text-align: center;
+}
+
+.empty-hint-text {
+  font-size: 28rpx;
+  color: #999999;
+}
+
+/* 分割线 */
+.divider {
+  height: 20rpx;
+  background-color: #f7f8fa;
+}
+
+/* 商品明细 */
+.products-section {
+  background-color: #ffffff;
+  border-radius: 16rpx;
+  padding: 32rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
+}
+
+.section-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333333;
+  margin-bottom: 24rpx;
+}
+
+.product-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.product-item:last-child {
+  border-bottom: none;
+}
+
+.product-name {
+  font-size: 30rpx;
+  color: #333333;
+  font-weight: 500;
+}
+
+.product-price {
+  font-size: 32rpx;
+  color: #ff6034;
+  font-weight: bold;
+}
+
+/* 汇总信息 */
+.summary-section {
+  background-color: #ffffff;
+  border-radius: 16rpx;
+  padding: 32rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20rpx 0;
+}
+
+.summary-label {
+  font-size: 30rpx;
+  color: #666666;
+}
+
+.summary-value {
+  font-size: 30rpx;
+  color: #333333;
+  font-weight: 500;
+}
+
+.summary-row.total {
+  border-top: 2rpx solid #f0f0f0;
+  padding-top: 24rpx;
+  margin-top: 12rpx;
+}
+
+.summary-row.total .summary-label {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333333;
+}
+
+.summary-value.grand {
+  font-size: 40rpx;
+  color: #ff6034;
+  font-weight: bold;
+}
+
+/* 底部提交栏 */
+.submit-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 120rpx;
+  background-color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32rpx;
+  box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.08);
+  z-index: 999;
+}
+
+.total-info {
+  display: flex;
+  align-items: baseline;
+  gap: 12rpx;
+}
+
+.total-label {
+  font-size: 28rpx;
+  color: #666666;
+}
+
+.total-price {
+  font-size: 44rpx;
+  color: #ff6034;
+  font-weight: bold;
+}
+
+.submit-btn {
+  width: 280rpx;
+  height: 88rpx;
+  background: linear-gradient(135deg, #ff6034 0%, #ee0a24 100%);
+  color: #ffffff;
+  font-size: 32rpx;
+  font-weight: bold;
+  border-radius: 44rpx;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8rpx 16rpx rgba(255, 96, 52, 0.3);
+}
+
+.submit-btn::after {
+  border: none;
+}
+
+.submit-btn:active {
+  transform: scale(0.95);
+  opacity: 0.9;
+}
+
+/* 隐藏Canvas */
+.result-canvas {
+  position: fixed;
+  top: -9999rpx;
+  left: -9999rpx;
+  z-index: -1;
+}

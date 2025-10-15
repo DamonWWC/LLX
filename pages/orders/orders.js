@@ -1,7 +1,17 @@
 // pages/orders/orders.js
 Page({
   data: {
-    orderList: []
+    orderList: [],
+    canvasWidth: 0,
+    canvasHeight: 600
+  },
+
+  onLoad() {
+    // 获取系统信息
+    const systemInfo = wx.getSystemInfoSync()
+    this.setData({
+      canvasWidth: systemInfo.windowWidth - 40
+    })
   },
 
   onShow() {
@@ -41,8 +51,13 @@ Page({
       detail += `   小计：¥${item.subtotal}\n`
     })
     
-    detail += `\n商品总价：¥${order.totalRicePrice}\n`
-    detail += `运费：¥${order.totalShipping}\n`
+    // 兼容旧订单（没有 totalRicePrice 和 totalShipping 字段）
+    if (order.totalRicePrice !== undefined && order.totalShipping !== undefined) {
+      detail += `\n商品总价：¥${order.totalRicePrice}\n`
+      detail += `运费：¥${order.totalShipping}\n`
+    } else {
+      detail += `\n`
+    }
     detail += `实付款：¥${order.grandTotal}`
 
     wx.showModal({
@@ -115,6 +130,274 @@ Page({
               icon: 'none'
             })
           }
+        }
+      }
+    })
+  },
+
+  // 导出订单图片
+  exportOrderImage(e) {
+    const { orderid } = e.currentTarget.dataset
+    const order = this.data.orderList.find(item => item.id === orderid)
+    
+    if (!order) return
+
+    wx.showLoading({
+      title: '生成中...',
+      mask: true
+    })
+
+    const query = wx.createSelectorQuery()
+    query.select('#orderCanvas')
+      .fields({ node: true, size: true })
+      .exec(async (res) => {
+        if (!res || !res[0]) {
+          wx.hideLoading()
+          wx.showToast({
+            title: '生成失败',
+            icon: 'none'
+          })
+          return
+        }
+
+        const canvas = res[0].node
+        const ctx = canvas.getContext('2d')
+        const dpr = wx.getSystemInfoSync().pixelRatio
+        
+        canvas.width = this.data.canvasWidth * dpr
+        canvas.height = this.data.canvasHeight * dpr
+        ctx.scale(dpr, dpr)
+
+        await this.drawOrderContent(ctx, order)
+
+        wx.canvasToTempFilePath({
+          canvas: canvas,
+          success: (res) => {
+            wx.hideLoading()
+            this.saveImageToAlbum(res.tempFilePath)
+          },
+          fail: (err) => {
+            console.error('生成图片失败', err)
+            wx.hideLoading()
+            wx.showToast({
+              title: '生成失败',
+              icon: 'none'
+            })
+          }
+        })
+      })
+  },
+
+  // 分享订单
+  shareOrder(e) {
+    const { orderid } = e.currentTarget.dataset
+    const order = this.data.orderList.find(item => item.id === orderid)
+    
+    if (!order) return
+
+    wx.showLoading({
+      title: '生成中...',
+      mask: true
+    })
+
+    const query = wx.createSelectorQuery()
+    query.select('#orderCanvas')
+      .fields({ node: true, size: true })
+      .exec(async (res) => {
+        if (!res || !res[0]) {
+          wx.hideLoading()
+          wx.showToast({
+            title: '生成失败',
+            icon: 'none'
+          })
+          return
+        }
+
+        const canvas = res[0].node
+        const ctx = canvas.getContext('2d')
+        const dpr = wx.getSystemInfoSync().pixelRatio
+        
+        canvas.width = this.data.canvasWidth * dpr
+        canvas.height = this.data.canvasHeight * dpr
+        ctx.scale(dpr, dpr)
+
+        await this.drawOrderContent(ctx, order)
+
+        wx.canvasToTempFilePath({
+          canvas: canvas,
+          success: (res) => {
+            wx.hideLoading()
+            // 分享图片
+            wx.showShareImageMenu({
+              path: res.tempFilePath,
+              success: () => {
+                console.log('分享成功')
+              },
+              fail: (err) => {
+                console.error('分享失败', err)
+                wx.showToast({
+                  title: '分享失败',
+                  icon: 'none'
+                })
+              }
+            })
+          },
+          fail: (err) => {
+            console.error('生成图片失败', err)
+            wx.hideLoading()
+            wx.showToast({
+              title: '生成失败',
+              icon: 'none'
+            })
+          }
+        })
+      })
+  },
+
+  // 绘制订单内容
+  drawOrderContent(ctx, order) {
+    return new Promise((resolve) => {
+      const width = this.data.canvasWidth
+      let y = 40
+
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, width, this.data.canvasHeight)
+
+      ctx.fillStyle = '#333333'
+      ctx.font = 'bold 24px sans-serif'
+      ctx.fillText('订单详情', 20, y)
+      y += 40
+
+      ctx.font = '16px sans-serif'
+      ctx.fillStyle = '#666666'
+      ctx.fillText(`订单号: ${order.orderNo}`, 20, y)
+      y += 30
+
+      ctx.strokeStyle = '#eeeeee'
+      ctx.beginPath()
+      ctx.moveTo(20, y)
+      ctx.lineTo(width - 20, y)
+      ctx.stroke()
+      y += 30
+
+      ctx.fillStyle = '#333333'
+      ctx.font = 'bold 18px sans-serif'
+      ctx.fillText('收货信息', 20, y)
+      y += 30
+
+      ctx.font = '16px sans-serif'
+      ctx.fillStyle = '#666666'
+      ctx.fillText(`${order.address.name}  ${order.address.phone}`, 20, y)
+      y += 25
+      
+      const addressText = `${order.address.province}${order.address.city}${order.address.district}${order.address.detail}`
+      this.wrapText(ctx, addressText, 20, y, width - 40, 22)
+      y += 50
+
+      ctx.strokeStyle = '#eeeeee'
+      ctx.beginPath()
+      ctx.moveTo(20, y)
+      ctx.lineTo(width - 20, y)
+      ctx.stroke()
+      y += 30
+
+      ctx.fillStyle = '#333333'
+      ctx.font = 'bold 18px sans-serif'
+      ctx.fillText('商品明细', 20, y)
+      y += 30
+
+      order.products.forEach((item, index) => {
+        ctx.font = '16px sans-serif'
+        ctx.fillStyle = '#666666'
+        ctx.fillText(`${index + 1}. ${item.name} × ${item.quantity}`, 20, y)
+        ctx.fillStyle = '#ff6034'
+        ctx.fillText(`¥${item.subtotal}`, width - 100, y)
+        y += 30
+      })
+
+      y += 10
+      ctx.strokeStyle = '#eeeeee'
+      ctx.beginPath()
+      ctx.moveTo(20, y)
+      ctx.lineTo(width - 20, y)
+      ctx.stroke()
+      y += 30
+
+      if (order.totalRicePrice !== undefined && order.totalShipping !== undefined) {
+        ctx.font = '16px sans-serif'
+        ctx.fillStyle = '#666666'
+        ctx.fillText('商品总价', 20, y)
+        ctx.fillText(`¥${order.totalRicePrice}`, width - 100, y)
+        y += 30
+
+        ctx.fillText('运费', 20, y)
+        ctx.fillText(`¥${order.totalShipping}`, width - 100, y)
+        y += 40
+      }
+
+      ctx.font = 'bold 20px sans-serif'
+      ctx.fillStyle = '#333333'
+      ctx.fillText('实付款', 20, y)
+      ctx.fillStyle = '#ff6034'
+      ctx.fillText(`¥${order.grandTotal}`, width - 120, y)
+      y += 40
+
+      ctx.font = '14px sans-serif'
+      ctx.fillStyle = '#999999'
+      ctx.fillText(`下单时间: ${order.createTime}`, 20, y)
+
+      resolve()
+    })
+  },
+
+  // 文字换行
+  wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+    const words = text.split('')
+    let line = ''
+    let testLine = ''
+    let lineCount = 0
+
+    for (let n = 0; n < words.length; n++) {
+      testLine = line + words[n]
+      const metrics = ctx.measureText(testLine)
+      if (metrics.width > maxWidth && n > 0) {
+        ctx.fillText(line, x, y + lineCount * lineHeight)
+        line = words[n]
+        lineCount++
+      } else {
+        line = testLine
+      }
+    }
+    ctx.fillText(line, x, y + lineCount * lineHeight)
+  },
+
+  // 保存图片到相册
+  saveImageToAlbum(filePath) {
+    wx.saveImageToPhotosAlbum({
+      filePath: filePath,
+      success: () => {
+        wx.showToast({
+          title: '已保存到相册',
+          icon: 'success'
+        })
+      },
+      fail: (err) => {
+        if (err.errMsg.includes('auth deny')) {
+          wx.showModal({
+            title: '提示',
+            content: '需要授权保存到相册',
+            confirmText: '去设置',
+            success: (res) => {
+              if (res.confirm) {
+                wx.openSetting()
+              }
+            }
+          })
+        } else {
+          wx.showToast({
+            title: '保存失败',
+            icon: 'none'
+          })
         }
       }
     })
