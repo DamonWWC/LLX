@@ -51,13 +51,16 @@ Page({
       detail += `   小计：¥${item.subtotal}\n`
     })
     
-    // 兼容旧订单（没有 totalRicePrice 和 totalShipping 字段）
-    if (order.totalRicePrice !== undefined && order.totalShipping !== undefined) {
-      detail += `\n商品总价：¥${order.totalRicePrice}\n`
+    // 价格明细
+    detail += `\n商品总价：¥${order.totalRicePrice || order.grandTotal}\n`
+    
+    // 运费信息（新订单才有）
+    if (order.totalWeight && order.shippingRate && order.totalShipping) {
+      detail += `总重量：${order.totalWeight}斤\n`
+      detail += `运费单价：${order.shippingRate}元/斤\n`
       detail += `运费：¥${order.totalShipping}\n`
-    } else {
-      detail += `\n`
     }
+    
     detail += `实付款：¥${order.grandTotal}`
 
     wx.showModal({
@@ -323,18 +326,25 @@ Page({
       ctx.stroke()
       y += 30
 
-      if (order.totalRicePrice !== undefined && order.totalShipping !== undefined) {
-        ctx.font = '16px sans-serif'
-        ctx.fillStyle = '#666666'
-        ctx.fillText('商品总价', 20, y)
-        ctx.fillText(`¥${order.totalRicePrice}`, width - 100, y)
-        y += 30
+      // 价格汇总
+      ctx.font = '16px sans-serif'
+      ctx.fillStyle = '#666666'
+      ctx.fillText('商品总价', 20, y)
+      ctx.fillText(`¥${order.totalRicePrice || order.grandTotal}`, width - 100, y)
+      y += 30
 
-        ctx.fillText('运费', 20, y)
+      // 运费信息
+      if (order.totalWeight && order.shippingRate && order.totalShipping) {
+        ctx.fillText(`总重量 (${order.totalWeight}斤)`, 20, y)
+        y += 30
+        ctx.fillText(`运费 (${order.shippingRate}元/斤)`, 20, y)
         ctx.fillText(`¥${order.totalShipping}`, width - 100, y)
         y += 40
+      } else {
+        y += 10
       }
 
+      // 实付款
       ctx.font = 'bold 20px sans-serif'
       ctx.fillStyle = '#333333'
       ctx.fillText('实付款', 20, y)

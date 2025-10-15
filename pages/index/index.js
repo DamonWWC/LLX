@@ -10,7 +10,8 @@ Page({
     // 添加大米表单数据
     newRiceName: '',
     newRicePrice: '',
-    newRiceShipping: '',
+    newRiceUnit: '袋',  // 单位：袋/箱
+    newRiceWeight: '',    // 重量（斤）
     newRiceImage: 'data:image/svg+xml,%3Csvg width="300" height="300" xmlns="http://www.w3.org/2000/svg"%3E%3Crect width="300" height="300" fill="%23F5F5F5"/%3E%3Ctext x="50%25" y="50%25" font-size="80" fill="%239E9E9E" text-anchor="middle" dy=".3em"%3E🌾%3C/text%3E%3C/svg%3E',
     
     // 购物车总数量
@@ -23,7 +24,6 @@ Page({
     showResult: false,
     selectedProducts: [],  // 已选商品列表（带小计）
     totalRicePrice: 0,
-    totalShipping: 0,
     grandTotal: 0,
     
     // 收货地址
@@ -53,7 +53,8 @@ Page({
         id: 1,
         name: '东北大米',
         price: 89.9,
-        shipping: 10,
+        unit: '袋',
+        weight: 10,
         image: 'data:image/svg+xml,%3Csvg width="300" height="300" xmlns="http://www.w3.org/2000/svg"%3E%3Crect width="300" height="300" fill="%23E8F5E9"/%3E%3Ctext x="50%25" y="50%25" font-size="80" fill="%234CAF50" text-anchor="middle" dy=".3em"%3E🌾%3C/text%3E%3C/svg%3E',
         quantity: 0
       },
@@ -61,7 +62,8 @@ Page({
         id: 2,
         name: '泰国香米',
         price: 128,
-        shipping: 15,
+        unit: '袋',
+        weight: 10,
         image: 'data:image/svg+xml,%3Csvg width="300" height="300" xmlns="http://www.w3.org/2000/svg"%3E%3Crect width="300" height="300" fill="%23FFF3E0"/%3E%3Ctext x="50%25" y="50%25" font-size="80" fill="%23FF9800" text-anchor="middle" dy=".3em"%3E🌾%3C/text%3E%3C/svg%3E',
         quantity: 0
       },
@@ -69,7 +71,8 @@ Page({
         id: 3,
         name: '五常稻花香',
         price: 158,
-        shipping: 12,
+        unit: '袋',
+        weight: 10,
         image: 'data:image/svg+xml,%3Csvg width="300" height="300" xmlns="http://www.w3.org/2000/svg"%3E%3Crect width="300" height="300" fill="%23FCE4EC"/%3E%3Ctext x="50%25" y="50%25" font-size="80" fill="%23E91E63" text-anchor="middle" dy=".3em"%3E🌾%3C/text%3E%3C/svg%3E',
         quantity: 0
       }
@@ -81,11 +84,11 @@ Page({
     try {
       const savedProducts = wx.getStorageSync('riceProducts')
       if (savedProducts && savedProducts.length > 0) {
-        // 修复旧的外部图片链接为SVG data URI
+        // 修复和升级商品数据结构
         const fixedProducts = savedProducts.map(product => {
+          // 修复旧的外部图片链接
           if (product.image && product.image.includes('via.placeholder.com')) {
             console.log('修复旧图片链接:', product.name)
-            // 根据商品名称使用不同的SVG占位图
             const colorMap = {
               '东北大米': { bg: '%23E8F5E9', fg: '%234CAF50' },
               '泰国香米': { bg: '%23FFF3E0', fg: '%23FF9800' },
@@ -94,14 +97,32 @@ Page({
             const colors = colorMap[product.name] || { bg: '%23F5F5F5', fg: '%239E9E9E' }
             product.image = `data:image/svg+xml,%3Csvg width="300" height="300" xmlns="http://www.w3.org/2000/svg"%3E%3Crect width="300" height="300" fill="${colors.bg}"/%3E%3Ctext x="50%25" y="50%25" font-size="80" fill="${colors.fg}" text-anchor="middle" dy=".3em"%3E🌾%3C/text%3E%3C/svg%3E`
           }
+          
+          // 升级数据结构：添加unit和weight，去掉shipping
+          if (!product.unit) {
+            product.unit = '袋'
+          }
+          // 统一单位格式：袋装→袋，箱装→箱
+          if (product.unit === '袋装') {
+            product.unit = '袋'
+          }
+          if (product.unit === '箱装') {
+            product.unit = '箱'
+          }
+          if (!product.weight) {
+            product.weight = 10
+          }
+          // 删除旧的shipping字段
+          if (product.shipping !== undefined) {
+            delete product.shipping
+          }
+          
           return product
         })
         
         // 保存修复后的数据
-        if (fixedProducts.some((p, i) => p.image !== savedProducts[i].image)) {
-          this.saveLocalData(fixedProducts)
-          console.log('已修复并保存商品图片链接')
-        }
+        this.saveLocalData(fixedProducts)
+        console.log('已修复并保存商品数据结构')
         
         // 加载保存的商品数据
         this.setData({
@@ -151,7 +172,8 @@ Page({
       showAddDialog: true,
       newRiceName: '',
       newRicePrice: '',
-      newRiceShipping: '',
+      newRiceUnit: '袋',
+      newRiceWeight: '',
       newRiceImage: 'data:image/svg+xml,%3Csvg width="300" height="300" xmlns="http://www.w3.org/2000/svg"%3E%3Crect width="300" height="300" fill="%23F5F5F5"/%3E%3Ctext x="50%25" y="50%25" font-size="80" fill="%239E9E9E" text-anchor="middle" dy=".3em"%3E🌾%3C/text%3E%3C/svg%3E'
     })
   },
@@ -177,10 +199,17 @@ Page({
     })
   },
 
-  // 输入新大米运费
-  onNewRiceShippingInput(e) {
+  // 选择单位
+  onNewRiceUnitChange(e) {
     this.setData({
-      newRiceShipping: e.detail.value
+      newRiceUnit: e.detail.value
+    })
+  },
+
+  // 输入重量
+  onNewRiceWeightInput(e) {
+    this.setData({
+      newRiceWeight: e.detail.value
     })
   },
 
@@ -241,7 +270,7 @@ Page({
 
   // 确认添加新大米类型
   confirmAddRice() {
-    const { newRiceName, newRicePrice, newRiceShipping, newRiceImage, riceProducts } = this.data
+    const { newRiceName, newRicePrice, newRiceUnit, newRiceWeight, newRiceImage, riceProducts } = this.data
 
     // 验证输入
     if (!newRiceName.trim()) {
@@ -260,9 +289,9 @@ Page({
       return
     }
 
-    if (!newRiceShipping || isNaN(newRiceShipping) || parseFloat(newRiceShipping) < 0) {
+    if (!newRiceWeight || isNaN(newRiceWeight) || parseFloat(newRiceWeight) <= 0) {
       wx.showToast({
-        title: '请输入有效的运费',
+        title: '请输入有效的重量',
         icon: 'none'
       })
       return
@@ -273,7 +302,8 @@ Page({
       id: Date.now(),
       name: newRiceName.trim(),
       price: parseFloat(newRicePrice),
-      shipping: parseFloat(newRiceShipping),
+      unit: newRiceUnit,
+      weight: parseFloat(newRiceWeight),
       image: newRiceImage,
       quantity: 0
     }
@@ -387,30 +417,29 @@ Page({
 
     // 计算总价和准备已选商品列表
     let totalRicePrice = 0
-    let totalShipping = 0
     let selectedProducts = []
 
     riceProducts.forEach(product => {
       if (product.quantity > 0) {
-        const subtotal = (product.price * product.quantity + product.shipping * product.quantity).toFixed(2)
+        const subtotal = (product.price * product.quantity).toFixed(2)
         selectedProducts.push({
           id: product.id,
           name: product.name,
+          unit: product.unit,
+          weight: product.weight,
           quantity: product.quantity,
           subtotal: subtotal
         })
         totalRicePrice += product.price * product.quantity
-        totalShipping += product.shipping * product.quantity
       }
     })
 
-    const grandTotal = totalRicePrice + totalShipping
+    const grandTotal = totalRicePrice
 
     // 将结算数据保存到本地存储
     const checkoutData = {
       selectedProducts: selectedProducts,
       totalRicePrice: totalRicePrice.toFixed(2),
-      totalShipping: totalShipping.toFixed(2),
       grandTotal: grandTotal.toFixed(2),
       selectedAddress: selectedAddress
     }
@@ -611,7 +640,7 @@ Page({
 
   // 保存为图片
   saveAsImage() {
-    const { selectedProducts, totalRicePrice, totalShipping, grandTotal } = this.data
+    const { selectedProducts, totalRicePrice, grandTotal } = this.data
 
     if (!this.data.showResult) {
       wx.showToast({
@@ -701,8 +730,6 @@ Page({
         ctx.font = '15px sans-serif'
         ctx.fillStyle = '#666666'
         ctx.fillText(`商品总价: ¥${totalRicePrice}`, 30, y)
-        y += 30
-        ctx.fillText(`运费总计: ¥${totalShipping}`, 30, y)
         y += 30
 
         ctx.strokeStyle = '#1890ff'

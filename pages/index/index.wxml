@@ -22,10 +22,10 @@
       <view class="product-info">
         <view class="product-name">{{item.name}}</view>
         <view class="product-price">
-          <text class="price-value">{{item.price}}</text>
-          <text class="price-unit">/袋</text>
+          <text class="price-value">¥{{item.price}}</text>
+          <text class="price-unit">/{{item.unit}}</text>
         </view>
-        <view class="product-shipping">🚚 运费 ¥{{item.shipping}}</view>
+        <view class="product-weight">📦 {{item.weight}}斤/{{item.unit}}</view>
       </view>
       
       <!-- 数量控制 -->
@@ -186,7 +186,7 @@
       <view class="form-item">
         <view class="form-label">
           <text class="required">*</text>
-          <text>价格（元/袋）</text>
+          <text>价格（元）</text>
         </view>
         <input 
           class="form-input" 
@@ -197,18 +197,36 @@
         />
       </view>
 
-      <!-- 运费 -->
+      <!-- 单位 -->
       <view class="form-item">
         <view class="form-label">
           <text class="required">*</text>
-          <text>运费（元/袋）</text>
+          <text>单位</text>
+        </view>
+        <radio-group class="radio-group" bindchange="onNewRiceUnitChange">
+          <label class="radio-item">
+            <radio value="袋" checked="{{newRiceUnit === '袋'}}" color="#ff6034"/>
+            <text class="radio-text">袋</text>
+          </label>
+          <label class="radio-item">
+            <radio value="箱" checked="{{newRiceUnit === '箱'}}" color="#ff6034"/>
+            <text class="radio-text">箱</text>
+          </label>
+        </radio-group>
+      </view>
+
+      <!-- 重量 -->
+      <view class="form-item">
+        <view class="form-label">
+          <text class="required">*</text>
+          <text>重量（斤）</text>
         </view>
         <input 
           class="form-input" 
           type="digit"
-          placeholder="请输入运费" 
-          value="{{newRiceShipping}}"
-          bindinput="onNewRiceShippingInput"
+          placeholder="请输入重量" 
+          value="{{newRiceWeight}}"
+          bindinput="onNewRiceWeightInput"
         />
       </view>
     </view>

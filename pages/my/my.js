@@ -43,6 +43,13 @@ Page({
     wx.navigateTo({
       url: '/pages/address/address'
     })
+  },
+
+  // 跳转到运费标准
+  goToShipping() {
+    wx.navigateTo({
+      url: '/pages/shipping/shipping'
+    })
   }
 })
 

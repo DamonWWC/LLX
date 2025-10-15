@@ -91,7 +91,8 @@ page {
 
 .menu-grid {
   display: flex;
-  gap: 24rpx;
+  gap: 16rpx;
+  flex-wrap: wrap;
 }
 
 .menu-item {

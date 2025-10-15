@@ -4,7 +4,8 @@
     "pages/my/my",
     "pages/address/address",
     "pages/checkout/checkout",
-    "pages/orders/orders"
+    "pages/orders/orders",
+    "pages/shipping/shipping"
   ],
   "window": {
     "navigationBarTextStyle": "black",

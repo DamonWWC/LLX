@@ -5,8 +5,7 @@
     <view class="user-info">
       <view class="avatar">👤</view>
       <view class="user-text">
-        <text class="username">大米商城用户</text>
-        <text class="user-tip">本地单机版</text>
+        <text class="username">林龍香商城用户</text>
       </view>
     </view>
   </view>
@@ -24,6 +23,10 @@
         <view class="menu-icon">📍</view>
         <text class="menu-text">收货地址</text>
         <view class="menu-badge" wx:if="{{addressCount > 0}}">{{addressCount}}</view>
+      </view>
+      <view class="menu-item" bindtap="goToShipping">
+        <view class="menu-icon">🚚</view>
+        <text class="menu-text">运费标准</text>
       </view>
     </view>
   </view>

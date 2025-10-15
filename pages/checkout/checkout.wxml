@@ -42,8 +42,16 @@
         <text class="summary-value">¥{{totalRicePrice}}</text>
       </view>
       <view class="summary-row">
-        <text class="summary-label">运费总计</text>
+        <text class="summary-label">总重量</text>
+        <text class="summary-value">{{totalWeight}}斤</text>
+      </view>
+      <view class="summary-row" wx:if="{{selectedAddress}}">
+        <text class="summary-label">运费 ({{shippingRate}}元/斤)</text>
         <text class="summary-value">¥{{totalShipping}}</text>
+      </view>
+      <view class="summary-row" wx:else>
+        <text class="summary-label">运费</text>
+        <text class="summary-value hint">请先选择地址</text>
       </view>
       <view class="summary-row total">
         <text class="summary-label">应付总额</text>

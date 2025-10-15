@@ -170,6 +170,11 @@ page {
   font-weight: bold;
 }
 
+.summary-value.hint {
+  color: #999999;
+  font-size: 26rpx;
+}
+
 /* 底部提交栏 */
 .submit-bar {
   position: fixed;

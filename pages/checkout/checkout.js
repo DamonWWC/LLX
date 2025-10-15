@@ -1,8 +1,12 @@
 // pages/checkout/checkout.js
+const shippingConfig = require('../../utils/shippingConfig.js');
+
 Page({
   data: {
     selectedProducts: [],      // 已选商品列表
     totalRicePrice: 0,         // 商品总价
+    totalWeight: 0,            // 总重量（斤）
+    shippingRate: 0,           // 运费单价（元/斤）
     totalShipping: 0,          // 运费总计
     grandTotal: 0,             // 总计
     selectedAddress: null,     // 选中的收货地址
@@ -35,14 +39,46 @@ Page({
       // 从本地存储获取结算数据
       const checkoutData = wx.getStorageSync('checkoutData')
       if (checkoutData) {
-        this.setData({
-          selectedProducts: checkoutData.selectedProducts || [],
-          totalRicePrice: checkoutData.totalRicePrice || 0,
-          totalShipping: checkoutData.totalShipping || 0,
-          grandTotal: checkoutData.grandTotal || 0,
-          selectedAddress: checkoutData.selectedAddress || null
+        const selectedAddress = checkoutData.selectedAddress || null
+        const selectedProducts = checkoutData.selectedProducts || []
+        const totalRicePrice = parseFloat(checkoutData.totalRicePrice) || 0
+        
+        // 计算总重量
+        let totalWeight = 0
+        selectedProducts.forEach(product => {
+          totalWeight += (product.weight || 0) * (product.quantity || 0)
         })
-        console.log('加载结算数据:', checkoutData)
+        
+        // 计算运费
+        let shippingRate = 0
+        let totalShipping = 0
+        
+        if (selectedAddress && selectedAddress.province) {
+          const shippingInfo = shippingConfig.calculateShipping(totalWeight, selectedAddress.province)
+          shippingRate = shippingInfo.rate
+          totalShipping = shippingInfo.shipping
+        }
+        
+        // 计算总价
+        const grandTotal = (totalRicePrice + totalShipping).toFixed(2)
+        
+        this.setData({
+          selectedProducts: selectedProducts,
+          totalRicePrice: totalRicePrice.toFixed(2),
+          totalWeight: totalWeight,
+          shippingRate: shippingRate,
+          totalShipping: totalShipping,
+          grandTotal: grandTotal,
+          selectedAddress: selectedAddress
+        })
+        
+        console.log('加载结算数据:', {
+          totalRicePrice,
+          totalWeight,
+          shippingRate,
+          totalShipping,
+          grandTotal
+        })
       } else {
         wx.showToast({
           title: '结算数据加载失败',
@@ -66,7 +102,7 @@ Page({
 
   // 确认下单
   confirmOrder() {
-    const { selectedAddress, selectedProducts, totalRicePrice, totalShipping, grandTotal } = this.data
+    const { selectedAddress, selectedProducts, totalRicePrice, totalWeight, shippingRate, totalShipping, grandTotal } = this.data
 
     if (!selectedAddress) {
       wx.showToast({
@@ -83,6 +119,8 @@ Page({
       products: selectedProducts,
       address: selectedAddress,
       totalRicePrice: totalRicePrice,      // 商品总价
+      totalWeight: totalWeight,            // 总重量
+      shippingRate: shippingRate,          // 运费单价
       totalShipping: totalShipping,        // 运费总计
       grandTotal: grandTotal,              // 总计
       status: '待发货',
@@ -299,9 +337,15 @@ Page({
       ctx.fillText(`¥${order.totalRicePrice}`, width - 100, y)
       y += 30
 
-      ctx.fillText('运费', 20, y)
-      ctx.fillText(`¥${order.totalShipping}`, width - 100, y)
-      y += 40
+      if (order.totalWeight && order.shippingRate && order.totalShipping) {
+        ctx.fillText(`总重量 (${order.totalWeight}斤)`, 20, y)
+        y += 30
+        ctx.fillText(`运费 (${order.shippingRate}元/斤)`, 20, y)
+        ctx.fillText(`¥${order.totalShipping}`, width - 100, y)
+        y += 40
+      } else {
+        y += 10
+      }
 
       // 实付款
       ctx.font = 'bold 20px sans-serif'

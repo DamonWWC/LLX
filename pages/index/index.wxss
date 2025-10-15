@@ -181,12 +181,12 @@ page {
   margin-left: 4rpx;
 }
 
-.product-shipping {
-  font-size: 20rpx;
-  color: #999999;
+.product-weight {
+  font-size: 22rpx;
+  color: #666666;
   background-color: #f7f8fa;
-  padding: 4rpx 10rpx;
-  border-radius: 4rpx;
+  padding: 6rpx 12rpx;
+  border-radius: 6rpx;
   display: inline-block;
   width: fit-content;
 }
@@ -843,6 +843,24 @@ page {
   width: 100%;
   box-sizing: border-box;
   transition: all 0.3s;
+}
+
+/* 单选框组 */
+.radio-group {
+  display: flex;
+  gap: 32rpx;
+  padding: 12rpx 0;
+}
+
+.radio-item {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.radio-text {
+  font-size: 28rpx;
+  color: #333333;
 }
 
 .form-input:focus {
