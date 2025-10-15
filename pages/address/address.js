@@ -181,13 +181,21 @@ Page({
       console.log('[地址识别] 解析结果:', result)
       console.log('[地址识别] 验证结果:', validation)
       
-      // 填充表单（只填充识别到的字段）
+      // 检查是否有遮蔽手机号
+      let hasObscuredPhone = false
+      if (result.phone && result.phone.includes('*')) {
+        // 检测到遮蔽号码（填充原始内容，但提示用户修改）
+        hasObscuredPhone = true
+        validation.warnings.push('手机号包含遮蔽符号，请修改为完整号码')
+      }
+      
+      // 填充表单（填充所有识别到的字段，包括遮蔽手机号）
       const updateData = {
         showPasteDialog: false
       }
       
       if (result.name) updateData.formName = result.name
-      if (result.phone) updateData.formPhone = result.phone
+      if (result.phone) updateData.formPhone = result.phone  // 包括遮蔽号码
       if (result.province) updateData.formProvince = result.province
       if (result.city) updateData.formCity = result.city
       if (result.district) updateData.formDistrict = result.district
@@ -209,11 +217,27 @@ Page({
       
       // 显示识别结果
       if (recognizedCount >= 4) {
+        let tipMsg = `识别成功(${recognizedCount}项)`
+        if (hasObscuredPhone) {
+          tipMsg = `识别成功(${recognizedCount}项)`
+        }
+        
         wx.showToast({
-          title: `识别成功(${recognizedCount}项)`,
+          title: tipMsg,
           icon: 'success',
           duration: 2000
         })
+        
+        // 如果有遮蔽手机号，单独提示修改
+        if (hasObscuredPhone) {
+          setTimeout(() => {
+            wx.showToast({
+              title: '请将手机号修改为完整号码',
+              icon: 'none',
+              duration: 2000
+            })
+          }, 2000)
+        }
       } else if (recognizedCount > 0) {
         wx.showToast({
           title: `识别完成(${recognizedCount}项)`,
@@ -222,12 +246,16 @@ Page({
         })
         
         // 如果识别不完整，给出提示
-        if (validation.warnings.length > 0) {
+        if (validation.warnings.length > 0 || hasObscuredPhone) {
           setTimeout(() => {
+            let tipMsg = '请补充缺失信息'
+            if (hasObscuredPhone) {
+              tipMsg = '请修改手机号为完整号码'
+            }
             wx.showToast({
-              title: '请补充缺失信息',
+              title: tipMsg,
               icon: 'none',
-              duration: 1500
+              duration: 2000
             })
           }, 2000)
         }

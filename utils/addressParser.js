@@ -123,10 +123,10 @@ function extractPhone(text) {
     // 检查是否是遮蔽号码
     if (/1\d{2,3}\*+\d{2,3}/.test(phoneText)) {
       console.log('[地址解析] 检测到遮蔽手机号:', phoneText);
-      // 保留遮蔽号码，但标记需要补全
+      // 返回遮蔽号码原文，让用户看到并手动修改
       return {
-        phone: '',  // 不返回遮蔽号码
-        phoneHint: phoneText,  // 保存提示信息
+        phone: phoneText,  // 返回遮蔽号码原文
+        isObscured: true,  // 标记为遮蔽号码
         remainText: text.replace(labelMatch[0], '❌PHONE❌')
       };
     }
@@ -376,8 +376,12 @@ function cleanDetailAddress(text) {
     .replace(/❌CITY❌/g, '')
     .replace(/❌DISTRICT❌/g, '')
     .replace(/❌NAME❌/g, '')
-    .replace(/收货地址|详细地址|地址|收货人|姓名|联系人|手机号|电话|邮编|收件人/g, '')
-    .replace(/[:：,，.。、;；\s]+/g, ' ')
+    .replace(/❌ADDRESS_LABEL❌/g, '')
+    .replace(/❌STREET❌/g, '')  // 保留街道名称
+    .replace(/收货地址|详细地址|所在地区|地区|收货人|姓名|联系人|手机号码?|电话|邮编|收件人/g, '')
+    .replace(/[:：]+/g, '')  // 去除冒号
+    .replace(/[,，.。、;；]+/g, '')  // 去除标点
+    .replace(/\s+/g, ' ')  // 合并空格
     .replace(/^\s*[,，.。、;；]\s*/, '')
     .trim();
 }
