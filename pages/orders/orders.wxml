@@ -1,0 +1,67 @@
+<!--pages/orders/orders.wxml-->
+<view class="container">
+  <!-- 订单列表 -->
+  <scroll-view class="order-list" scroll-y wx:if="{{orderList.length > 0}}">
+    <view class="order-item" wx:for="{{orderList}}" wx:key="id">
+      <!-- 订单头部 -->
+      <view class="order-header">
+        <text class="order-no">订单号：{{item.orderNo}}</text>
+        <text class="order-status">{{item.status}}</text>
+      </view>
+
+      <!-- 订单内容 -->
+      <view class="order-content">
+        <!-- 商品信息 -->
+        <view class="order-products">
+          <view class="product-item" wx:for="{{item.products}}" wx:key="id" wx:for-item="product">
+            <text class="product-name">{{product.name}}</text>
+            <text class="product-quantity">× {{product.quantity}}</text>
+          </view>
+        </view>
+
+        <!-- 收货地址 -->
+        <view class="order-address">
+          <text class="address-icon">📍</text>
+          <text class="address-text">{{item.address.name}} {{item.address.phone}}</text>
+        </view>
+
+        <!-- 订单金额 -->
+        <view class="order-price">
+          <text class="price-label">实付款：</text>
+          <text class="price-value">¥{{item.grandTotal}}</text>
+        </view>
+
+        <!-- 订单时间 -->
+        <view class="order-time">
+          <text>{{item.createTime}}</text>
+        </view>
+      </view>
+
+      <!-- 订单操作 -->
+      <view class="order-actions">
+        <view class="action-btn" bindtap="viewOrderDetail" data-orderid="{{item.id}}">
+          <text>查看详情</text>
+        </view>
+        <view class="action-btn delete" bindtap="deleteOrder" data-orderid="{{item.id}}">
+          <text>删除订单</text>
+        </view>
+      </view>
+    </view>
+  </scroll-view>
+
+  <!-- 空状态 -->
+  <view class="empty-state" wx:if="{{orderList.length === 0}}">
+    <text class="empty-icon">📦</text>
+    <text class="empty-text">还没有订单</text>
+    <text class="empty-hint">去商品页面选购吧~</text>
+  </view>
+
+  <!-- 底部清空按钮 -->
+  <view class="bottom-bar" wx:if="{{orderList.length > 0}}">
+    <button class="clear-all-btn" bindtap="clearAllOrders">
+      <text class="btn-icon">🗑️</text>
+      <text>清空所有订单</text>
+    </button>
+  </view>
+</view>
+

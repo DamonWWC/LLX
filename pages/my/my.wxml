@@ -1,0 +1,31 @@
+<!--pages/my/my.wxml-->
+<view class="container">
+  <!-- 顶部卡片 -->
+  <view class="top-card">
+    <view class="user-info">
+      <view class="avatar">👤</view>
+      <view class="user-text">
+        <text class="username">大米商城用户</text>
+        <text class="user-tip">本地单机版</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 功能菜单 -->
+  <view class="menu-section">
+    <view class="menu-title">我的服务</view>
+    <view class="menu-grid">
+      <view class="menu-item" bindtap="goToOrders">
+        <view class="menu-icon">📦</view>
+        <text class="menu-text">我的订单</text>
+        <view class="menu-badge" wx:if="{{orderCount > 0}}">{{orderCount}}</view>
+      </view>
+      <view class="menu-item" bindtap="goToAddress">
+        <view class="menu-icon">📍</view>
+        <text class="menu-text">收货地址</text>
+        <view class="menu-badge" wx:if="{{addressCount > 0}}">{{addressCount}}</view>
+      </view>
+    </view>
+  </view>
+</view>
+
