@@ -35,41 +35,10 @@ Page({
   // 查看订单详情
   viewOrderDetail(e) {
     const { orderid } = e.currentTarget.dataset
-    const order = this.data.orderList.find(item => item.id === orderid)
     
-    if (!order) return
-
-    // 构建详情文本
-    let detail = `订单号：${order.orderNo}\n\n`
-    detail += `收货人：${order.address.name}\n`
-    detail += `电话：${order.address.phone}\n`
-    detail += `地址：${order.address.province}${order.address.city}${order.address.district}${order.address.detail}\n\n`
-    detail += `商品明细：\n`
-    
-    order.products.forEach((item, index) => {
-      const totalWeight = (item.quantity || 0) * (item.weight || 0)
-      const price = item.price || 0
-      detail += `${index + 1}.${item.name}（${item.weight || 10}斤/${item.unit || '袋'}）单价：${price}元\n`
-      detail += `   数量：${item.quantity}${item.unit || '袋'} ，总重：${totalWeight}斤 ，总价：${item.subtotal}元\n`
-    })
-    
-    // 价格明细
-    detail += `\n商品总价：¥${order.totalRicePrice || order.grandTotal}\n`
-    
-    // 运费信息（新订单才有）
-    if (order.totalWeight && order.shippingRate && order.totalShipping) {
-      detail += `总重量：${order.totalWeight}斤\n`
-      detail += `运费单价：${order.shippingRate}元/斤\n`
-      detail += `运费：¥${order.totalShipping}\n`
-    }
-    
-    detail += `实付款：¥${order.grandTotal}`
-
-    wx.showModal({
-      title: '订单详情',
-      content: detail,
-      showCancel: false,
-      confirmText: '关闭'
+    // 跳转到订单详情页面
+    wx.navigateTo({
+      url: `/pages/order-detail/order-detail?orderId=${orderid}`
     })
   },
 

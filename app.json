@@ -5,6 +5,7 @@
     "pages/address/address",
     "pages/checkout/checkout",
     "pages/orders/orders",
+    "pages/order-detail/order-detail",
     "pages/shipping/shipping"
   ],
   "window": {
