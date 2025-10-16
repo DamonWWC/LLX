@@ -19,7 +19,8 @@ const PROVINCES = [
 const MUNICIPALITIES = ['北京', '天津', '上海', '重庆'];
 
 /**
- * 智能解析地址信息
+ * 智能解析地址信息 - 增强版
+ * 支持识别各种顺序的组合：地址+电话+姓名、电话+地址+姓名等
  * @param {string} addressText - 原始地址文本
  * @returns {object} 解析结果
  */
@@ -53,34 +54,36 @@ function parseAddress(addressText) {
     raw: addressText
   };
 
-  // 1. 提取手机号
-  const phoneResult = extractPhone(text);
+  // 新算法：独立提取三大核心元素，不依赖顺序
+  
+  // 1. 独立提取手机号（优先级最高，特征最明显）
+  const phoneResult = extractPhoneEnhanced(text);
   result.phone = phoneResult.phone;
-  text = phoneResult.remainText;
+  let remainText = phoneResult.remainText;
 
-  // 2. 提取邮编
-  const postalResult = extractPostalCode(text);
+  // 2. 独立提取邮编
+  const postalResult = extractPostalCode(remainText);
   result.postalCode = postalResult.postalCode;
-  text = postalResult.remainText;
+  remainText = postalResult.remainText;
 
-  // 3. 提取固定电话（可选）
-  const telResult = extractTelephone(text);
-  text = telResult.remainText;
+  // 3. 独立提取固定电话
+  const telResult = extractTelephone(remainText);
+  remainText = telResult.remainText;
 
-  // 4. 提取省市区
-  const addressResult = extractProvinceCityDistrict(text);
+  // 4. 独立提取省市区（地址特征明显）
+  const addressResult = extractProvinceCityDistrictEnhanced(remainText);
   result.province = addressResult.province;
   result.city = addressResult.city;
   result.district = addressResult.district;
-  text = addressResult.remainText;
+  remainText = addressResult.remainText;
 
-  // 5. 提取姓名
-  const nameResult = extractName(text, addressText);
+  // 5. 智能提取姓名（增强算法，支持各种位置）
+  const nameResult = extractNameEnhanced(remainText, text, addressText, result);
   result.name = nameResult.name;
-  text = nameResult.remainText;
+  remainText = nameResult.remainText;
 
   // 6. 剩余部分作为详细地址
-  result.detail = cleanDetailAddress(text);
+  result.detail = cleanDetailAddress(remainText);
 
   console.log('[地址解析] 最终结果:', result);
   return result;
@@ -113,46 +116,70 @@ function preprocessText(text) {
 }
 
 /**
- * 提取手机号
+ * 提取手机号 - 增强版
+ * 支持各种位置和格式的手机号识别
  */
-function extractPhone(text) {
+function extractPhoneEnhanced(text) {
   // 先尝试从标签后提取
-  const labelMatch = text.match(/手机号：([^\n]+)/);
+  const labelMatch = text.match(/(?:手机号|电话|联系方式|TEL|Tel|tel)[:：\s]*([^\n]+)/);
   if (labelMatch) {
     const phoneText = labelMatch[1].trim();
     // 检查是否是遮蔽号码
     if (/1\d{2,3}\*+\d{2,3}/.test(phoneText)) {
       console.log('[地址解析] 检测到遮蔽手机号:', phoneText);
-      // 返回遮蔽号码原文，让用户看到并手动修改
       return {
-        phone: phoneText,  // 返回遮蔽号码原文
-        isObscured: true,  // 标记为遮蔽号码
+        phone: phoneText,
+        isObscured: true,
+        remainText: text.replace(labelMatch[0], '❌PHONE❌')
+      };
+    }
+    
+    // 从标签内容中提取手机号
+    const phoneInLabel = phoneText.match(/1[3-9]\d{9}/);
+    if (phoneInLabel) {
+      return {
+        phone: phoneInLabel[0],
         remainText: text.replace(labelMatch[0], '❌PHONE❌')
       };
     }
   }
 
-  // 匹配11位手机号（支持空格、横线、括号分隔）
+  // 匹配11位手机号（支持各种分隔符和前后文）
   const patterns = [
-    /1[3-9]\d[\s\-]?\d{4}[\s\-]?\d{4}/g,
+    // 标准11位
     /1[3-9]\d{9}/g,
-    /(?:^|\D)(1[3-9]\d)[\s\-\(（]?(\d{4})[\s\-\)）]?(\d{4})(?:\D|$)/g
+    // 带空格或横线分隔
+    /1[3-9]\d[\s\-]?\d{4}[\s\-]?\d{4}/g,
+    // 带括号
+    /\(?1[3-9]\d{2}\)?[\s\-]?\d{4}[\s\-]?\d{4}/g,
+    // 前后有非数字字符
+    /(?:^|[^\d])(1[3-9]\d{9})(?:[^\d]|$)/g,
   ];
 
   for (let pattern of patterns) {
-    const matches = text.match(pattern);
-    if (matches) {
-      const phone = matches[0].replace(/[\s\-\(（\)）]/g, '');
+    const matches = [...text.matchAll(pattern)];
+    for (let match of matches) {
+      let phone = match[1] || match[0];
+      phone = phone.replace(/[\s\-\(（\)）]/g, '');
+      
       if (phone.length === 11 && /^1[3-9]\d{9}$/.test(phone)) {
+        console.log('[地址解析] 提取到手机号:', phone);
         return {
           phone: phone,
-          remainText: text.replace(matches[0], '❌PHONE❌')
+          remainText: text.replace(match[0], '❌PHONE❌')
         };
       }
     }
   }
 
   return { phone: '', remainText: text };
+}
+
+/**
+ * 提取手机号 - 旧版本（保留兼容）
+ */
+function extractPhone(text) {
+  return extractPhoneEnhanced(text);
 }
 
 /**
@@ -193,37 +220,42 @@ function extractTelephone(text) {
 }
 
 /**
- * 提取省市区 - 核心算法
+ * 提取省市区 - 增强版
+ * 独立识别，不依赖文本顺序
  */
-function extractProvinceCityDistrict(text) {
+function extractProvinceCityDistrictEnhanced(text) {
   let province = '';
   let city = '';
   let district = '';
   let remainText = text;
 
   // 先尝试从"所在地区："或"地区："标签后提取
-  const labelMatch = text.match(/(?:所在地区|地区|收货地址|详细地址|地址)：([^\n]+)/);
+  const labelMatch = text.match(/(?:所在地区|地区|收货地址|详细地址|地址)[:：\s]*([^\n]+)/);
   if (labelMatch) {
     const addressPart = labelMatch[1];
-    // 如果标签后包含省市区信息，优先从这里提取
     console.log('[地址解析] 从标签提取地区:', addressPart);
     remainText = text.replace(labelMatch[0], '❌ADDRESS_LABEL❌ ' + addressPart);
   }
 
-  // 省份匹配规则
+  // 省份匹配规则（增强识别能力）
   const provinceRules = [
-    // 完整省份名
-    { pattern: /(北京|天津|上海|重庆)市?/, suffix: '市' },
-    { pattern: /(河北|山西|辽宁|吉林|黑龙江|江苏|浙江|安徽|福建|江西|山东|河南|湖北|湖南|广东|海南|四川|贵州|云南|陕西|甘肃|青海|台湾)省?/, suffix: '省' },
-    { pattern: /(内蒙古|广西|西藏|宁夏|新疆)(?:壮族|维吾尔|回族)?(?:自治区)?/, suffix: '自治区' },
-    { pattern: /(香港|澳门)(?:特别行政区)?/, suffix: '特别行政区' }
+    // 直辖市
+    { pattern: /(北京|天津|上海|重庆)(?:市)?(?!\s*[路街巷道])/g, suffix: '市' },
+    // 普通省份
+    { pattern: /(河北|山西|辽宁|吉林|黑龙江|江苏|浙江|安徽|福建|江西|山东|河南|湖北|湖南|广东|海南|四川|贵州|云南|陕西|甘肃|青海|台湾)(?:省)?/g, suffix: '省' },
+    // 自治区
+    { pattern: /(内蒙古|广西|西藏|宁夏|新疆)(?:壮族|维吾尔|回族)?(?:自治区)?/g, suffix: '自治区' },
+    // 特别行政区
+    { pattern: /(香港|澳门)(?:特别行政区)?/g, suffix: '特别行政区' }
   ];
 
-  // 匹配省份
+  // 匹配省份（全局搜索，找到最可能的省份）
   for (let rule of provinceRules) {
-    const match = remainText.match(rule.pattern);
-    if (match) {
+    const matches = [...remainText.matchAll(rule.pattern)];
+    if (matches.length > 0) {
+      const match = matches[0]; // 取第一个匹配
       const provinceName = match[1];
+      
       // 标准化省份名称
       if (['北京', '天津', '上海', '重庆'].includes(provinceName)) {
         province = provinceName + '市';
@@ -237,25 +269,29 @@ function extractProvinceCityDistrict(text) {
       } else {
         province = provinceName + '省';
       }
+      
       remainText = remainText.replace(match[0], '❌PROVINCE❌');
+      console.log('[地址解析] 提取到省份:', province);
       break;
     }
   }
 
-  // 城市匹配规则
+  // 城市匹配规则（增强识别）
   const cityRules = [
-    { pattern: /([\u4e00-\u9fa5]{2,10}?)市/, suffix: '市' },
-    { pattern: /([\u4e00-\u9fa5]{2,10}?)地区/, suffix: '地区' },
-    { pattern: /([\u4e00-\u9fa5]{2,10}?)(?:藏族|回族|蒙古族|壮族|彝族|朝鲜族|维吾尔|哈萨克|傣族|白族|土家族)?自治州/, suffix: '自治州' },
-    { pattern: /([\u4e00-\u9fa5]{2,10}?)盟/, suffix: '盟' }
+    { pattern: /([\u4e00-\u9fa5]{2,10}?)市(?!\s*[路街巷道])/g, suffix: '市' },
+    { pattern: /([\u4e00-\u9fa5]{2,10}?)地区/g, suffix: '地区' },
+    { pattern: /([\u4e00-\u9fa5]{2,10}?)(?:藏族|回族|蒙古族|壮族|彝族|朝鲜族|维吾尔|哈萨克|傣族|白族|土家族)?自治州/g, suffix: '自治州' },
+    { pattern: /([\u4e00-\u9fa5]{2,10}?)盟/g, suffix: '盟' }
   ];
 
   // 匹配城市
   for (let rule of cityRules) {
-    const match = remainText.match(rule.pattern);
-    if (match) {
+    const matches = [...remainText.matchAll(rule.pattern)];
+    if (matches.length > 0) {
+      const match = matches[0];
       city = match[0];
       remainText = remainText.replace(match[0], '❌CITY❌');
+      console.log('[地址解析] 提取到城市:', city);
       break;
     }
   }
@@ -267,26 +303,27 @@ function extractProvinceCityDistrict(text) {
 
   // 区县匹配规则
   const districtRules = [
-    { pattern: /([\u4e00-\u9fa5]{2,10}?)区/, suffix: '区' },
-    { pattern: /([\u4e00-\u9fa5]{2,10}?)县/, suffix: '县' },
-    { pattern: /([\u4e00-\u9fa5]{2,10}?)(?:满族|蒙古族|回族|藏族)?(?:自治)?旗/, suffix: '旗' }
+    { pattern: /([\u4e00-\u9fa5]{2,10}?)区(?!\s*[路街巷道])/g, suffix: '区' },
+    { pattern: /([\u4e00-\u9fa5]{2,10}?)县/g, suffix: '县' },
+    { pattern: /([\u4e00-\u9fa5]{2,10}?)(?:满族|蒙古族|回族|藏族)?(?:自治)?旗/g, suffix: '旗' }
   ];
 
   // 匹配区县
   for (let rule of districtRules) {
-    const match = remainText.match(rule.pattern);
-    if (match) {
+    const matches = [...remainText.matchAll(rule.pattern)];
+    if (matches.length > 0) {
+      const match = matches[0];
       district = match[0];
       remainText = remainText.replace(match[0], '❌DISTRICT❌');
+      console.log('[地址解析] 提取到区县:', district);
       break;
     }
   }
 
-  // 识别街道（但不从district中移除，保留在详细地址中）
+  // 识别街道（保留在详细地址中）
   const streetMatch = remainText.match(/([\u4e00-\u9fa5]{2,10}?)街道/);
   if (streetMatch) {
     console.log('[地址解析] 检测到街道:', streetMatch[0]);
-    // 标记街道，但保留在详细地址中
     remainText = remainText.replace(streetMatch[0], '❌STREET❌' + streetMatch[0]);
   }
 
@@ -299,69 +336,120 @@ function extractProvinceCityDistrict(text) {
 }
 
 /**
- * 提取姓名 - 增强算法
+ * 提取省市区 - 旧版本（保留兼容）
  */
-function extractName(text, originalText) {
-  // 策略1: 优先从标签后提取（支持换行格式）
-  let match = text.match(/(?:收件人|姓名|联系人)：\s*([^\n]+)/);
+function extractProvinceCityDistrict(text) {
+  return extractProvinceCityDistrictEnhanced(text);
+}
+
+/**
+ * 提取姓名 - 增强版
+ * 支持从任意位置识别姓名（在手机号和地址之前、之后或中间）
+ */
+function extractNameEnhanced(remainText, processedText, originalText, result) {
+  // 策略1: 优先从标签后提取
+  let match = remainText.match(/(?:收件人|姓名|联系人|收货人|NAME|Name|name)[:：\s]+([^\n\s❌]+)/);
   if (match) {
-    const name = match[1].trim();
+    const nameText = match[1].trim();
     // 提取中文姓名（2-4个字）
-    const nameMatch = name.match(/^[\u4e00-\u9fa5]{2,4}/);
+    const nameMatch = nameText.match(/^[\u4e00-\u9fa5]{2,4}/);
     if (nameMatch) {
+      console.log('[地址解析] 从标签提取到姓名:', nameMatch[0]);
       return {
         name: nameMatch[0],
-        remainText: text.replace(match[0], '❌NAME❌')
+        remainText: remainText.replace(match[0], '❌NAME❌')
       };
     }
   }
 
-  // 策略2: 匹配开头的2-4个中文字符（最常见）
-  match = text.match(/^[\u4e00-\u9fa5]{2,4}(?=\s|❌|$)/);
+  // 策略2: 从原始文本开头提取（格式：姓名 + 手机号 + 地址）
+  const headMatch = originalText.match(/^[\u4e00-\u9fa5]{2,4}(?=\s|[,，]|\d)/);
+  if (headMatch) {
+    const possibleName = headMatch[0];
+    // 验证这个名字不是省份或城市名
+    if (!PROVINCES.some(p => p.includes(possibleName)) && 
+        !['北京市', '天津市', '上海市', '重庆市'].includes(possibleName)) {
+      console.log('[地址解析] 从开头提取到姓名:', possibleName);
+      return {
+        name: possibleName,
+        remainText: remainText.replace(possibleName, '❌NAME❌')
+      };
+    }
+  }
+
+  // 策略3: 在手机号之前查找姓名（格式：姓名 + 手机号 + 地址）
+  if (result.phone) {
+    const beforePhoneMatch = originalText.match(new RegExp(`([\\u4e00-\\u9fa5]{2,4})\\s*[,，]?\\s*${result.phone}`));
+    if (beforePhoneMatch) {
+      const possibleName = beforePhoneMatch[1];
+      if (!PROVINCES.some(p => p.includes(possibleName))) {
+        console.log('[地址解析] 从手机号前提取到姓名:', possibleName);
+        return {
+          name: possibleName,
+          remainText: remainText.replace(possibleName, '❌NAME❌')
+        };
+      }
+    }
+  }
+
+  // 策略4: 在地址之后查找姓名（格式：地址 + 手机号 + 姓名）
+  if (result.province || result.city) {
+    // 在剩余文本中查找2-4个中文字符
+    const afterAddressMatch = remainText.match(/[\u4e00-\u9fa5]{2,4}(?=\s*$|[,，\s]+$)/);
+    if (afterAddressMatch) {
+      const possibleName = afterAddressMatch[0];
+      // 过滤掉常见的非姓名词汇
+      const blacklist = ['收货地址', '详细地址', '联系电话', '手机号', '固定电话', '邮政编码', '街道办', '居委会', '村委会'];
+      if (!blacklist.some(word => word.includes(possibleName))) {
+        console.log('[地址解析] 从地址后提取到姓名:', possibleName);
+        return {
+          name: possibleName,
+          remainText: remainText.replace(possibleName, '❌NAME❌')
+        };
+      }
+    }
+  }
+
+  // 策略5: 匹配开头的2-4个中文字符
+  match = remainText.match(/^[\u4e00-\u9fa5]{2,4}(?=\s|❌|[,，]|$)/);
   if (match) {
+    console.log('[地址解析] 从开头匹配到姓名:', match[0]);
     return {
       name: match[0],
-      remainText: text.replace(match[0], '❌NAME❌')
+      remainText: remainText.replace(match[0], '❌NAME❌')
     };
   }
 
-  // 策略3: 匹配"收货人"、"姓名"等关键词后的内容（兼容旧格式）
-  match = text.match(/(?:收货人|姓名|联系人|收件人)[:：\s]*[\u4e00-\u9fa5]{2,4}/);
-  if (match) {
-    const name = match[0].replace(/(?:收货人|姓名|联系人|收件人)[:：\s]*/, '');
-    return {
-      name: name,
-      remainText: text.replace(match[0], '❌NAME❌')
-    };
-  }
-
-  // 策略3: 在原始文本开头查找（有些格式会在省份前）
-  match = originalText.match(/^[\u4e00-\u9fa5]{2,4}(?=\s|\d)/);
-  if (match) {
-    return {
-      name: match[0],
-      remainText: text
-    };
-  }
-
-  // 策略4: 查找所有2-4个连续中文字符，取第一个
-  const allMatches = text.match(/[\u4e00-\u9fa5]{2,4}/g);
+  // 策略6: 查找所有2-4个连续中文字符，智能筛选
+  const allMatches = remainText.match(/[\u4e00-\u9fa5]{2,4}/g);
   if (allMatches && allMatches.length > 0) {
     // 过滤掉常见的非姓名词汇
+    const blacklist = ['收货地址', '详细地址', '联系电话', '手机号', '固定电话', '邮政编码', '街道办', '居委会', '村委会'];
     const filtered = allMatches.filter(name => {
-      const blacklist = ['收货地址', '详细地址', '联系电话', '手机号', '固定电话', '邮政编码'];
-      return !blacklist.some(word => word.includes(name));
+      // 排除黑名单
+      if (blacklist.some(word => word.includes(name))) return false;
+      // 排除省份名
+      if (PROVINCES.some(p => p.includes(name))) return false;
+      return true;
     });
     
     if (filtered.length > 0) {
+      console.log('[地址解析] 从候选中提取到姓名:', filtered[0]);
       return {
         name: filtered[0],
-        remainText: text.replace(filtered[0], '❌NAME❌')
+        remainText: remainText.replace(filtered[0], '❌NAME❌')
       };
     }
   }
 
-  return { name: '', remainText: text };
+  return { name: '', remainText: remainText };
+}
+
+/**
+ * 提取姓名 - 旧版本（保留兼容）
+ */
+function extractName(text, originalText) {
+  return extractNameEnhanced(text, text, originalText, {});
 }
 
 /**

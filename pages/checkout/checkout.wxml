@@ -27,9 +27,11 @@
     <!-- 已选商品明细 -->
     <view class="products-section">
       <view class="section-title">商品明细</view>
-      <view class="product-item" wx:for="{{selectedProducts}}" wx:key="id">
-        <view class="product-name">{{item.name}} × {{item.quantity}}</view>
-        <view class="product-price">¥{{item.subtotal}}</view>
+      <view class="product-item" wx:for="{{selectedProducts}}" wx:key="id" wx:for-index="idx">
+        <view class="product-info">
+          <view class="product-name">{{idx + 1}}.{{item.name}}（{{item.weight}}斤/{{item.unit}}）单价：{{item.price}}元</view>
+          <view class="product-detail">数量：{{item.quantity}}{{item.unit}} ，总重：{{item.quantity * item.weight}}斤 ，总价：{{item.subtotal}}元</view>
+        </view>
       </view>
     </view>
 

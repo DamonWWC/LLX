@@ -4,6 +4,12 @@ Page({
     // 大米商品库（所有可选的大米类型）
     riceProducts: [],
     
+    // 编辑模式
+    isEditMode: false,
+    
+    // 菜单显示状态
+    showMenu: false,
+    
     // 添加大米弹窗显示状态
     showAddDialog: false,
     
@@ -51,29 +57,38 @@ Page({
     return [
       {
         id: 1,
-        name: '东北大米',
-        price: 89.9,
+        name: '稻花香',
+        price: 40,
+        unit: '袋',
+        weight: 10,
+        image: 'data:image/svg+xml,%3Csvg width="300" height="300" xmlns="http://www.w3.org/2000/svg"%3E%3Crect width="300" height="300" fill="%23FCE4EC"/%3E%3Ctext x="50%25" y="50%25" font-size="80" fill="%23E91E63" text-anchor="middle" dy=".3em"%3E🌾%3C/text%3E%3C/svg%3E',
+        quantity: 0
+      },
+      {
+        id: 2,
+        name: '稻花香',
+        price: 50,
+        unit: '箱',
+        weight: 10,
+        image: 'data:image/svg+xml,%3Csvg width="300" height="300" xmlns="http://www.w3.org/2000/svg"%3E%3Crect width="300" height="300" fill="%23FCE4EC"/%3E%3Ctext x="50%25" y="50%25" font-size="80" fill="%23E91E63" text-anchor="middle" dy=".3em"%3E📦%3C/text%3E%3C/svg%3E',
+        quantity: 0
+      },
+      {
+        id: 3,
+        name: '长粒香',
+        price: 30,
         unit: '袋',
         weight: 10,
         image: 'data:image/svg+xml,%3Csvg width="300" height="300" xmlns="http://www.w3.org/2000/svg"%3E%3Crect width="300" height="300" fill="%23E8F5E9"/%3E%3Ctext x="50%25" y="50%25" font-size="80" fill="%234CAF50" text-anchor="middle" dy=".3em"%3E🌾%3C/text%3E%3C/svg%3E',
         quantity: 0
       },
       {
-        id: 2,
-        name: '泰国香米',
-        price: 128,
-        unit: '袋',
+        id: 4,
+        name: '长粒香',
+        price: 40,
+        unit: '箱',
         weight: 10,
-        image: 'data:image/svg+xml,%3Csvg width="300" height="300" xmlns="http://www.w3.org/2000/svg"%3E%3Crect width="300" height="300" fill="%23FFF3E0"/%3E%3Ctext x="50%25" y="50%25" font-size="80" fill="%23FF9800" text-anchor="middle" dy=".3em"%3E🌾%3C/text%3E%3C/svg%3E',
-        quantity: 0
-      },
-      {
-        id: 3,
-        name: '五常稻花香',
-        price: 158,
-        unit: '袋',
-        weight: 10,
-        image: 'data:image/svg+xml,%3Csvg width="300" height="300" xmlns="http://www.w3.org/2000/svg"%3E%3Crect width="300" height="300" fill="%23FCE4EC"/%3E%3Ctext x="50%25" y="50%25" font-size="80" fill="%23E91E63" text-anchor="middle" dy=".3em"%3E🌾%3C/text%3E%3C/svg%3E',
+        image: 'data:image/svg+xml,%3Csvg width="300" height="300" xmlns="http://www.w3.org/2000/svg"%3E%3Crect width="300" height="300" fill="%23E8F5E9"/%3E%3Ctext x="50%25" y="50%25" font-size="80" fill="%234CAF50" text-anchor="middle" dy=".3em"%3E📦%3C/text%3E%3C/svg%3E',
         quantity: 0
       }
     ]
@@ -90,12 +105,15 @@ Page({
           if (product.image && product.image.includes('via.placeholder.com')) {
             console.log('修复旧图片链接:', product.name)
             const colorMap = {
+              '稻花香': { bg: '%23FCE4EC', fg: '%23E91E63' },
+              '长粒香': { bg: '%23E8F5E9', fg: '%234CAF50' },
               '东北大米': { bg: '%23E8F5E9', fg: '%234CAF50' },
               '泰国香米': { bg: '%23FFF3E0', fg: '%23FF9800' },
               '五常稻花香': { bg: '%23FCE4EC', fg: '%23E91E63' }
             }
             const colors = colorMap[product.name] || { bg: '%23F5F5F5', fg: '%239E9E9E' }
-            product.image = `data:image/svg+xml,%3Csvg width="300" height="300" xmlns="http://www.w3.org/2000/svg"%3E%3Crect width="300" height="300" fill="${colors.bg}"/%3E%3Ctext x="50%25" y="50%25" font-size="80" fill="${colors.fg}" text-anchor="middle" dy=".3em"%3E🌾%3C/text%3E%3C/svg%3E`
+            const emoji = product.unit === '箱' ? '📦' : '🌾'
+            product.image = `data:image/svg+xml,%3Csvg width="300" height="300" xmlns="http://www.w3.org/2000/svg"%3E%3Crect width="300" height="300" fill="${colors.bg}"/%3E%3Ctext x="50%25" y="50%25" font-size="80" fill="${colors.fg}" text-anchor="middle" dy=".3em"%3E${emoji}%3C/text%3E%3C/svg%3E`
           }
           
           // 升级数据结构：添加unit和weight，去掉shipping
@@ -427,6 +445,7 @@ Page({
           name: product.name,
           unit: product.unit,
           weight: product.weight,
+          price: product.price,  // 保存单价
           quantity: product.quantity,
           subtotal: subtotal
         })
@@ -609,11 +628,49 @@ Page({
     })
   },
 
+  // 切换菜单显示
+  toggleMenu() {
+    this.setData({
+      showMenu: !this.data.showMenu
+    })
+  },
+
+  // 关闭菜单
+  closeMenu() {
+    this.setData({
+      showMenu: false
+    })
+  },
+
+  // 切换编辑模式
+  toggleEditMode() {
+    this.setData({
+      isEditMode: !this.data.isEditMode,
+      showMenu: false  // 关闭菜单
+    })
+  },
+
+  // 显示添加大米弹窗（从菜单触发）
+  showAddRiceDialogFromMenu() {
+    this.setData({
+      showMenu: false  // 关闭菜单
+    })
+    this.showAddRiceDialog()
+  },
+
+  // 恢复默认商品（从菜单触发）
+  restoreDefaultProductsFromMenu() {
+    this.setData({
+      showMenu: false  // 关闭菜单
+    })
+    this.restoreDefaultProducts()
+  },
+
   // 恢复默认商品
   restoreDefaultProducts() {
     wx.showModal({
       title: '恢复默认商品',
-      content: '确定要恢复默认的3种大米商品吗？这将清除所有自定义商品。',
+      content: '确定要恢复默认的4种大米商品吗？这将清除所有自定义商品。',
       confirmText: '确定恢复',
       confirmColor: '#ff6034',
       success: (res) => {

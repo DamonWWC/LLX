@@ -13,9 +13,9 @@
       <view class="order-content">
         <!-- 商品信息 -->
         <view class="order-products">
-          <view class="product-item" wx:for="{{item.products}}" wx:key="id" wx:for-item="product">
-            <text class="product-name">{{product.name}}</text>
-            <text class="product-quantity">× {{product.quantity}}</text>
+          <view class="product-item" wx:for="{{item.products}}" wx:key="id" wx:for-item="product" wx:for-index="idx">
+            <text class="product-name">{{idx + 1}}.{{product.name}}（{{product.weight}}斤/{{product.unit}}）单价：{{product.price}}元</text>
+            <text class="product-detail">数量：{{product.quantity}}{{product.unit}} ，总重：{{product.quantity * product.weight}}斤 ，总价：{{product.subtotal}}元</text>
           </view>
         </view>
 
@@ -43,7 +43,10 @@
           <text>查看详情</text>
         </view>
         <view class="action-btn export" bindtap="exportOrderImage" data-orderid="{{item.id}}">
-          <text>📥 导出</text>
+          <text>📥 订单</text>
+        </view>
+        <view class="action-btn export-shipping" bindtap="exportShippingList" data-orderid="{{item.id}}">
+          <text>📋 发货单</text>
         </view>
         <view class="action-btn share" bindtap="shareOrder" data-orderid="{{item.id}}">
           <text>📤 分享</text>

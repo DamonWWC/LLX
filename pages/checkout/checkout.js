@@ -210,13 +210,22 @@ Page({
           const ctx = canvas.getContext('2d')
           const dpr = wx.getSystemInfoSync().pixelRatio
           
-          // 设置canvas尺寸
+          // 先用足够大的临时高度绘制一次以计算实际需要的高度
+          // 根据商品数量预估高度：基础500 + 每个商品约100px + 地址等信息300px
+          const estimatedHeight = Math.max(3000, 800 + order.products.length * 100)
           canvas.width = this.data.canvasWidth * dpr
-          canvas.height = this.data.canvasHeight * dpr
+          canvas.height = estimatedHeight * dpr
           ctx.scale(dpr, dpr)
 
+          const actualHeight = await this.drawOrderContent(ctx, order, estimatedHeight)
+          
+          // 用实际高度重新绘制
+          canvas.width = this.data.canvasWidth * dpr
+          canvas.height = actualHeight * dpr
+          ctx.scale(dpr, dpr)
+          
           // 绘制订单内容
-          await this.drawOrderContent(ctx, order)
+          await this.drawOrderContent(ctx, order, actualHeight)
 
           // 生成图片
           wx.canvasToTempFilePath({
@@ -254,14 +263,14 @@ Page({
   },
 
   // 绘制订单内容到Canvas
-  drawOrderContent(ctx, order) {
+  drawOrderContent(ctx, order, canvasHeight) {
     return new Promise((resolve) => {
       const width = this.data.canvasWidth
       let y = 40
 
       // 设置背景
       ctx.fillStyle = '#ffffff'
-      ctx.fillRect(0, 0, width, this.data.canvasHeight)
+      ctx.fillRect(0, 0, width, canvasHeight)
 
       // 标题
       ctx.fillStyle = '#333333'
@@ -295,8 +304,8 @@ Page({
       y += 25
       
       const addressText = `${order.address.province}${order.address.city}${order.address.district}${order.address.detail}`
-      this.wrapText(ctx, addressText, 20, y, width - 40, 22)
-      y += 50
+      const addressLines = this.wrapText(ctx, addressText, 20, y, width - 40, 22)
+      y += addressLines * 22 + 25  // 根据实际行数动态调整
 
       // 分割线
       ctx.strokeStyle = '#eeeeee'
@@ -313,12 +322,20 @@ Page({
       y += 30
 
       order.products.forEach((item, index) => {
+        const totalWeight = (item.quantity || 0) * (item.weight || 0)
+        const price = item.price || 0
+        
+        // 商品名称可能需要换行
         ctx.font = '16px sans-serif'
         ctx.fillStyle = '#666666'
-        ctx.fillText(`${index + 1}. ${item.name} × ${item.quantity}`, 20, y)
-        ctx.fillStyle = '#ff6034'
-        ctx.fillText(`¥${item.subtotal}`, width - 100, y)
-        y += 30
+        const productName = `${index + 1}.${item.name}（${item.weight || 10}斤/${item.unit || '袋'}）单价：${price}元`
+        const nameLines = this.wrapText(ctx, productName, 20, y, width - 40, 22)
+        y += nameLines * 22 + 3
+        
+        ctx.font = '14px sans-serif'
+        ctx.fillStyle = '#999999'
+        ctx.fillText(`   数量：${item.quantity}${item.unit || '袋'} ，总重：${totalWeight}斤 ，总价：${item.subtotal}元`, 20, y)
+        y += 28
       })
 
       // 分割线
@@ -334,14 +351,15 @@ Page({
       ctx.font = '16px sans-serif'
       ctx.fillStyle = '#666666'
       ctx.fillText('商品总价', 20, y)
-      ctx.fillText(`¥${order.totalRicePrice}`, width - 100, y)
+      ctx.fillText(`${order.totalRicePrice}元`, width - 100, y)
       y += 30
 
       if (order.totalWeight && order.shippingRate && order.totalShipping) {
-        ctx.fillText(`总重量 (${order.totalWeight}斤)`, 20, y)
+        ctx.fillText('总重量', 20, y)
+        ctx.fillText(`${order.totalWeight}斤`, width - 100, y)
         y += 30
         ctx.fillText(`运费 (${order.shippingRate}元/斤)`, 20, y)
-        ctx.fillText(`¥${order.totalShipping}`, width - 100, y)
+        ctx.fillText(`${order.totalShipping}元`, width - 100, y)
         y += 40
       } else {
         y += 10
@@ -352,19 +370,20 @@ Page({
       ctx.fillStyle = '#333333'
       ctx.fillText('实付款', 20, y)
       ctx.fillStyle = '#ff6034'
-      ctx.fillText(`¥${order.grandTotal}`, width - 120, y)
+      ctx.fillText(`${order.grandTotal}元`, width - 120, y)
       y += 40
 
       // 订单时间
       ctx.font = '14px sans-serif'
       ctx.fillStyle = '#999999'
       ctx.fillText(`下单时间: ${order.createTime}`, 20, y)
+      y += 40  // 留出底部空白
 
-      resolve()
+      resolve(y)  // 返回实际使用的高度
     })
   },
 
-  // 文字换行
+  // 文字换行（返回实际使用的行数）
   wrapText(ctx, text, x, y, maxWidth, lineHeight) {
     const words = text.split('')
     let line = ''
@@ -383,6 +402,7 @@ Page({
       }
     }
     ctx.fillText(line, x, y + lineCount * lineHeight)
+    return lineCount + 1  // 返回实际使用的行数
   },
 
   // 保存图片到相册

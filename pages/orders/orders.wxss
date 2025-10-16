@@ -80,14 +80,23 @@ page {
 
 .product-item {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   padding: 12rpx 0;
+  gap: 8rpx;
 }
 
 .product-name {
-  font-size: 32rpx;
+  font-size: 30rpx;
   color: #333333;
   font-weight: 500;
+  line-height: 1.5;
+}
+
+.product-detail {
+  font-size: 28rpx;
+  color: #ff6034;
+  font-weight: bold;
+  line-height: 1.5;
 }
 
 .product-quantity {
@@ -181,6 +190,16 @@ page {
 
 .action-btn.export:active {
   background-color: #bae7ff;
+}
+
+.action-btn.export-shipping {
+  color: #722ed1;
+  border-color: #d3adf7;
+  background-color: #f9f0ff;
+}
+
+.action-btn.export-shipping:active {
+  background-color: #efdbff;
 }
 
 .action-btn.share {

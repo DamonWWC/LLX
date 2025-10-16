@@ -4,11 +4,31 @@
   <view class="top-bar">
     <view class="top-left">
       <text class="page-title">🌾 林龍香大米商城</text>
-      <text class="restore-btn" bindtap="restoreDefaultProducts">恢复默认</text>
     </view>
-    <view class="add-product-btn" bindtap="showAddRiceDialog">
-      <text class="add-icon">+</text>
-      <text class="add-text">添加品种</text>
+    <view class="top-right">
+      <!-- 工具图标按钮 -->
+      <view class="tool-btn {{showMenu ? 'active' : ''}}" bindtap="toggleMenu">
+        <text class="tool-icon">⚙</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 下拉菜单 -->
+  <view class="menu-overlay {{showMenu ? 'show' : ''}}" bindtap="closeMenu"></view>
+  <view class="dropdown-menu {{showMenu ? 'show' : ''}}">
+    <view class="menu-item" bindtap="toggleEditMode">
+      <text class="menu-icon">{{isEditMode ? '✓' : '✎'}}</text>
+      <text class="menu-text">{{isEditMode ? '完成编辑' : '编辑商品'}}</text>
+    </view>
+    <view class="menu-divider"></view>
+    <view class="menu-item" bindtap="showAddRiceDialogFromMenu">
+      <text class="menu-icon">+</text>
+      <text class="menu-text">添加品种</text>
+    </view>
+    <view class="menu-divider"></view>
+    <view class="menu-item" bindtap="restoreDefaultProductsFromMenu">
+      <text class="menu-icon">↻</text>
+      <text class="menu-text">恢复默认</text>
     </view>
   </view>
 
@@ -43,8 +63,8 @@
         </view>
       </view>
 
-      <!-- 删除按钮 -->
-      <view class="delete-icon" bindtap="deleteProduct" data-id="{{item.id}}">
+      <!-- 删除按钮（仅在编辑模式下显示） -->
+      <view class="delete-icon {{isEditMode ? 'show' : ''}}" bindtap="deleteProduct" data-id="{{item.id}}">
         <text>×</text>
       </view>
     </view>

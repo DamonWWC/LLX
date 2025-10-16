@@ -103,9 +103,6 @@ page {
 }
 
 .product-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   padding: 20rpx 0;
   border-bottom: 1rpx solid #f0f0f0;
 }
@@ -114,16 +111,24 @@ page {
   border-bottom: none;
 }
 
+.product-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
 .product-name {
   font-size: 30rpx;
   color: #333333;
   font-weight: 500;
+  line-height: 1.5;
 }
 
-.product-price {
-  font-size: 32rpx;
+.product-detail {
+  font-size: 28rpx;
   color: #ff6034;
   font-weight: bold;
+  line-height: 1.5;
 }
 
 /* 汇总信息 */
