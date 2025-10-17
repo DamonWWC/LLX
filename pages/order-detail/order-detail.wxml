@@ -87,6 +87,30 @@
         <text class="label">订单状态</text>
         <text class="value status">{{order.status}}</text>
       </view>
+      <view class="info-row" wx:if="{{order.paymentStatus}}">
+        <text class="label">付款状态</text>
+        <text class="value payment-status {{order.paymentStatus === '已付款' ? 'paid' : 'unpaid'}}">{{order.paymentStatus}}</text>
+      </view>
+    </view>
+
+    <!-- 快递信息 -->
+    <view class="section" wx:if="{{order.status === '已发货'}}">
+      <view class="section-title">
+        <text class="title-icon">📦</text>
+        <text class="title-text">快递信息</text>
+      </view>
+      <view class="info-row" wx:if="{{order.trackingNumber}}">
+        <text class="label">快递单号</text>
+        <text class="value tracking-number">{{order.trackingNumber}}</text>
+      </view>
+      <view class="info-row" wx:if="{{order.shippingTime}}">
+        <text class="label">发货时间</text>
+        <text class="value">{{order.shippingTime}}</text>
+      </view>
+      <view class="info-row" wx:if="{{!order.trackingNumber}}">
+        <text class="label">快递单号</text>
+        <text class="value no-tracking">暂未填写</text>
+      </view>
     </view>
   </view>
 

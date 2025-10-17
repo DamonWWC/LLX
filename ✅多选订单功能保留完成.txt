@@ -1,0 +1,28 @@
+✅ 多选订单功能保留完成
+
+已完成的工作：
+1. ✅ 删除了合并订单跳转功能（mergeSelectedOrders方法）
+2. ✅ 删除了导出合并订单图片功能（exportMergedOrderImage和drawMergedOrderContent方法）
+3. ✅ 删除了pages/merge-orders整个页面目录及其所有文件
+4. ✅ 从app.json中移除了merge-orders页面注册
+5. ✅ 简化了orders.wxml中的多选底部操作栏，只保留费用合计显示
+6. ✅ 清理了orders.wxss中不再需要的按钮样式
+
+保留的功能：
+✓ 多选订单模式切换（在搜索栏右侧）
+✓ 订单多选勾选功能
+✓ 选中订单的费用合计显示（底部固定栏）
+✓ 已选订单数量显示
+
+用户体验：
+- 用户可以点击"多选订单"进入多选模式
+- 点击订单可以选中/取消选中
+- 底部会实时显示已选订单数量和总金额
+- 点击"取消多选"退出多选模式并清空选择
+
+技术实现：
+- 使用isMultiSelectMode控制多选模式状态
+- selectedOrders数组存储选中的订单
+- totalAmount实时计算选中订单的总金额
+- 底部栏使用fixed定位，自适应安全区域
+

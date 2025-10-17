@@ -2,15 +2,45 @@
 Page({
   data: {
     orderList: [],
+    filteredOrderList: [],  // 过滤后的订单列表
+    searchKeyword: '',      // 搜索关键词
+    isSearching: false,     // 是否正在搜索
+    filterStatus: '',       // 状态过滤
     canvasWidth: 0,
-    canvasHeight: 600
+    canvasHeight: 600,
+    isMultiSelectMode: false, // 是否多选模式
+    selectedOrders: [],     // 选中的订单
+    totalAmount: 0          // 选中订单总金额
   },
 
-  onLoad() {
+  onLoad(options) {
     // 获取系统信息
     const systemInfo = wx.getSystemInfoSync()
+    
+    // 确保URL参数被正确解码
+    let filterStatus = ''
+    if (options.status) {
+      try {
+        filterStatus = decodeURIComponent(options.status)
+      } catch (e) {
+        filterStatus = options.status
+      }
+    }
+    
+    // 根据过滤状态设置页面标题
+    let pageTitle = '订单管理'
+    if (filterStatus) {
+      pageTitle = filterStatus
+    }
+    
+    // 设置导航栏标题
+    wx.setNavigationBarTitle({
+      title: pageTitle
+    })
+    
     this.setData({
-      canvasWidth: systemInfo.windowWidth - 40
+      canvasWidth: systemInfo.windowWidth - 40,
+      filterStatus: filterStatus
     })
   },
 
@@ -22,11 +52,47 @@ Page({
   // 加载订单列表
   loadOrders() {
     try {
-      const orderList = wx.getStorageSync('orderList') || []
-      this.setData({
-        orderList: orderList
+      let orderList = wx.getStorageSync('orderList') || []
+      
+      // 数据修复：清理所有订单的状态字段
+      let needSave = false
+      orderList = orderList.map(order => {
+        if (order.status) {
+          const trimmedStatus = order.status.trim()
+          if (trimmedStatus !== order.status) {
+            needSave = true
+            return { ...order, status: trimmedStatus }
+          }
+        } else {
+          // 如果没有 status 字段，根据 paymentStatus 补充
+          const newStatus = order.paymentStatus === '已付款' ? '待发货' : '待付款'
+          needSave = true
+          return { ...order, status: newStatus }
+        }
+        return order
       })
-      console.log('加载订单', orderList.length, '个')
+      
+      // 如果有修复，保存回存储
+      if (needSave) {
+        wx.setStorageSync('orderList', orderList)
+      }
+      
+      let filteredOrders = orderList
+      
+      // 如果有状态过滤，先按状态过滤
+      if (this.data.filterStatus) {
+        filteredOrders = orderList.filter(order => {
+          // 使用 trim() 去除可能的空格，提高匹配的健壮性
+          const orderStatus = (order.status || '').trim()
+          const filterStatus = this.data.filterStatus.trim()
+          return orderStatus === filterStatus
+        })
+      }
+      
+      this.setData({
+        orderList: orderList,
+        filteredOrderList: filteredOrders
+      })
     } catch (error) {
       console.error('加载订单失败', error)
     }
@@ -40,6 +106,84 @@ Page({
     wx.navigateTo({
       url: `/pages/order-detail/order-detail?orderId=${orderid}`
     })
+  },
+
+  // 防止事件冒泡
+  preventBubble() {
+    // 阻止事件冒泡，防止触发订单详情
+  },
+
+  // 切换更多菜单
+  toggleMoreMenu(e) {
+    const { orderid } = e.currentTarget.dataset
+    
+    // 关闭其他订单的更多菜单
+    const orderList = this.data.orderList.map(order => ({
+      ...order,
+      showMoreMenu: order.id === orderid ? !order.showMoreMenu : false
+    }))
+    
+    this.setData({
+      orderList: orderList
+    })
+    
+    // 重新应用过滤和搜索
+    this.performSearch(this.data.searchKeyword)
+  },
+
+  // 切换多选模式
+  toggleMultiSelectMode() {
+    const isMultiSelectMode = !this.data.isMultiSelectMode
+    
+    // 如果退出多选模式，清空所有选择
+    if (!isMultiSelectMode) {
+      const orderList = this.data.orderList.map(order => ({
+        ...order,
+        selected: false
+      }))
+      
+      this.setData({
+        isMultiSelectMode: false,
+        orderList: orderList,
+        selectedOrders: [],
+        totalAmount: 0
+      })
+    } else {
+      this.setData({
+        isMultiSelectMode: true
+      })
+    }
+    
+    // 重新应用过滤和搜索
+    this.performSearch(this.data.searchKeyword)
+  },
+
+  // 切换订单选择状态
+  toggleOrderSelection(e) {
+    const { orderid } = e.currentTarget.dataset
+    
+    const orderList = this.data.orderList.map(order => {
+      if (order.id === orderid) {
+        return {
+          ...order,
+          selected: !order.selected
+        }
+      }
+      return order
+    })
+    
+    // 计算选中的订单和总金额
+    const selectedOrders = orderList.filter(order => order.selected)
+    const totalAmount = selectedOrders.reduce((sum, order) => sum + (parseFloat(order.grandTotal) || 0), 0)
+    
+    this.setData({
+      orderList: orderList,
+      selectedOrders: selectedOrders,
+      totalAmount: totalAmount.toFixed(2)
+    })
+    
+    // 重新应用过滤和搜索
+    this.performSearch(this.data.searchKeyword)
   },
 
   // 删除订单
@@ -59,8 +203,12 @@ Page({
             
             // 更新页面
             this.setData({
-              orderList: orderList
+              orderList: orderList,
+              filteredOrderList: orderList
             })
+            
+            // 重新应用过滤和搜索
+            this.performSearch(this.data.searchKeyword)
             
             wx.showToast({
               title: '删除成功',
@@ -78,6 +226,319 @@ Page({
     })
   },
 
+  // 搜索输入处理
+  onSearchInput(e) {
+    const keyword = e.detail.value.trim()
+    this.setData({
+      searchKeyword: keyword
+    })
+    
+    // 实时搜索
+    this.performSearch(keyword)
+  },
+
+  // 搜索确认处理
+  onSearchConfirm(e) {
+    const keyword = e.detail.value.trim()
+    this.performSearch(keyword)
+  },
+
+  // 执行搜索
+  performSearch(keyword) {
+    const { orderList, filterStatus } = this.data
+    
+    if (!keyword) {
+      // 清空搜索，显示按状态过滤的订单
+      let filteredOrders = orderList
+      if (filterStatus) {
+        filteredOrders = orderList.filter(order => {
+          const orderStatus = (order.status || '').trim()
+          return orderStatus === filterStatus.trim()
+        })
+      }
+      
+      this.setData({
+        filteredOrderList: filteredOrders,
+        isSearching: false
+      })
+      return
+    }
+
+    // 先按状态过滤，再按姓名或电话搜索
+    let baseOrders = orderList
+    if (filterStatus) {
+      baseOrders = orderList.filter(order => {
+        const orderStatus = (order.status || '').trim()
+        return orderStatus === filterStatus.trim()
+      })
+    }
+    
+    const filteredOrders = baseOrders.filter(order => {
+      const name = order.address?.name || ''
+      const phone = order.address?.phone || ''
+      
+      return name.includes(keyword) || phone.includes(keyword)
+    })
+
+    this.setData({
+      filteredOrderList: filteredOrders,
+      isSearching: true
+    })
+
+    console.log(`搜索"${keyword}"，找到${filteredOrders.length}个订单`)
+  },
+
+  // 清空搜索
+  clearSearch() {
+    const { orderList, filterStatus } = this.data
+    let filteredOrders = orderList
+    
+    // 如果有状态过滤，按状态过滤
+    if (filterStatus) {
+      filteredOrders = orderList.filter(order => {
+        const orderStatus = (order.status || '').trim()
+        return orderStatus === filterStatus.trim()
+      })
+    }
+    
+    this.setData({
+      searchKeyword: '',
+      filteredOrderList: filteredOrders,
+      isSearching: false
+    })
+  },
+
+  // 更新订单状态
+  updateOrderStatus(e) {
+    const { orderid, currentStatus } = e.currentTarget.dataset
+    
+    let newStatus = ''
+    let confirmText = ''
+    let confirmContent = ''
+    
+    // 根据当前状态确定下一个状态（使用 trim 处理当前状态）
+    const trimmedStatus = (currentStatus || '').trim()
+    switch (trimmedStatus) {
+      case '待付款':
+        newStatus = '待发货'.trim()
+        confirmText = '确认付款'
+        confirmContent = '确认该订单已付款？'
+        break
+      case '待发货':
+        newStatus = '已发货'.trim()
+        confirmText = '确认发货'
+        confirmContent = '确认该订单已发货？'
+        // 对于发货操作，需要询问快递单号
+        this.handleShippingConfirm(orderid, currentStatus, newStatus)
+        return
+      default:
+        wx.showToast({
+          title: '状态更新失败',
+          icon: 'none'
+        })
+        return
+    }
+    
+    // 非发货操作直接更新状态
+    wx.showModal({
+      title: '状态更新',
+      content: confirmContent,
+      confirmText: confirmText,
+      success: (res) => {
+        if (res.confirm) {
+          this.updateOrderStatusDirect(orderid, currentStatus, newStatus)
+        }
+      }
+    })
+  },
+
+  // 处理发货确认（包含快递单号输入）
+  handleShippingConfirm(orderId, currentStatus, newStatus) {
+    wx.showModal({
+      title: '确认发货',
+      content: '请输入快递单号（可选）',
+      editable: true,
+      placeholderText: '请输入快递单号',
+      confirmText: '确认发货',
+      cancelText: '暂不发货',
+      success: (res) => {
+        if (res.confirm) {
+          // 用户确认发货，获取快递单号
+          const trackingNumber = res.content || ''
+          this.updateOrderStatusWithTracking(orderId, currentStatus, newStatus, trackingNumber)
+        }
+      }
+    })
+  },
+
+  // 直接更新订单状态（非发货操作）
+  updateOrderStatusDirect(orderId, currentStatus, newStatus) {
+    try {
+      // 更新订单状态
+      const orderList = this.data.orderList.map(order => {
+        if (order.id === orderId) {
+          const updatedOrder = {
+            ...order,
+            status: newStatus
+          }
+          
+          // 如果是确认付款操作，同时更新付款状态
+          if (currentStatus === '待付款' && newStatus === '待发货') {
+            updatedOrder.paymentStatus = '已付款'
+          }
+          
+          return updatedOrder
+        }
+        return order
+      })
+      
+      // 保存到本地
+      wx.setStorageSync('orderList', orderList)
+      
+      // 更新页面数据
+      this.setData({
+        orderList: orderList
+      })
+      
+      // 重新应用过滤和搜索
+      this.performSearch(this.data.searchKeyword)
+      
+      wx.showToast({
+        title: '状态更新成功',
+        icon: 'success'
+      })
+      
+      console.log(`订单${orderId}状态从${currentStatus}更新为${newStatus}`)
+    } catch (error) {
+      console.error('更新订单状态失败', error)
+      wx.showToast({
+        title: '更新失败',
+        icon: 'none'
+      })
+    }
+  },
+
+  // 更新订单状态并添加快递单号
+  updateOrderStatusWithTracking(orderId, currentStatus, newStatus, trackingNumber) {
+    try {
+      // 更新订单状态和快递单号
+      const orderList = this.data.orderList.map(order => {
+        if (order.id === orderId) {
+          const updatedOrder = {
+            ...order,
+            status: newStatus
+          }
+          
+          // 如果有快递单号，添加到订单中
+          if (trackingNumber.trim()) {
+            updatedOrder.trackingNumber = trackingNumber.trim()
+            updatedOrder.shippingTime = new Date().toLocaleString('zh-CN')
+          }
+          
+          return updatedOrder
+        }
+        return order
+      })
+      
+      // 保存到本地
+      wx.setStorageSync('orderList', orderList)
+      
+      // 更新页面数据
+      this.setData({
+        orderList: orderList
+      })
+      
+      // 重新应用过滤和搜索
+      this.performSearch(this.data.searchKeyword)
+      
+      wx.showToast({
+        title: trackingNumber.trim() ? '发货成功，已记录快递单号' : '发货成功',
+        icon: 'success'
+      })
+      
+      console.log(`订单${orderId}状态从${currentStatus}更新为${newStatus}${trackingNumber.trim() ? `，快递单号：${trackingNumber}` : ''}`)
+    } catch (error) {
+      console.error('更新订单状态失败', error)
+      wx.showToast({
+        title: '更新失败',
+        icon: 'none'
+      })
+    }
+  },
+
+  // 编辑快递单号
+  editTrackingNumber(e) {
+    const { orderid } = e.currentTarget.dataset
+    const order = this.data.orderList.find(item => item.id === orderid)
+    
+    if (!order) return
+    
+    const currentTracking = order.trackingNumber || ''
+    const title = currentTracking ? '修改快递单号' : '添加快递单号'
+    
+    wx.showModal({
+      title: title,
+      content: '请输入快递单号',
+      editable: true,
+      placeholderText: '请输入快递单号',
+      confirmText: '保存',
+      cancelText: '取消',
+      success: (res) => {
+        if (res.confirm) {
+          const trackingNumber = res.content || ''
+          this.updateTrackingNumber(orderid, trackingNumber)
+        }
+      }
+    })
+  },
+
+  // 更新快递单号
+  updateTrackingNumber(orderId, trackingNumber) {
+    try {
+      const orderList = this.data.orderList.map(order => {
+        if (order.id === orderId) {
+          const updatedOrder = { ...order }
+          
+          if (trackingNumber.trim()) {
+            updatedOrder.trackingNumber = trackingNumber.trim()
+            updatedOrder.shippingTime = updatedOrder.shippingTime || new Date().toLocaleString('zh-CN')
+          } else {
+            // 如果快递单号为空，移除相关字段
+            delete updatedOrder.trackingNumber
+            delete updatedOrder.shippingTime
+          }
+          
+          return updatedOrder
+        }
+        return order
+      })
+      
+      // 保存到本地
+      wx.setStorageSync('orderList', orderList)
+      
+      // 更新页面数据
+      this.setData({
+        orderList: orderList
+      })
+      
+      // 重新应用过滤和搜索
+      this.performSearch(this.data.searchKeyword)
+      
+      wx.showToast({
+        title: trackingNumber.trim() ? '快递单号已保存' : '快递单号已清除',
+        icon: 'success'
+      })
+      
+      console.log(`订单${orderId}快递单号更新为：${trackingNumber || '无'}`)
+    } catch (error) {
+      console.error('更新快递单号失败', error)
+      wx.showToast({
+        title: '更新失败',
+        icon: 'none'
+      })
+    }
+  },
+
   // 清空所有订单
   clearAllOrders() {
     wx.showModal({
@@ -90,7 +551,10 @@ Page({
             wx.setStorageSync('orderList', [])
             
             this.setData({
-              orderList: []
+              orderList: [],
+              filteredOrderList: [],
+              searchKeyword: '',
+              isSearching: false
             })
             
             wx.showToast({
@@ -590,6 +1054,7 @@ Page({
     ctx.fillText(line, x, y + lineCount * lineHeight)
     return lineCount + 1  // 返回实际使用的行数
   },
+
 
   // 保存图片到相册
   saveImageToAlbum(filePath) {

@@ -433,7 +433,7 @@ checkbox {
 .paste-dialog {
   position: fixed;
   left: 50%;
-  bottom: 0;
+  bottom: 50px;
   transform: translateX(-50%);
   width: 100%;
   max-width: 750rpx;
@@ -442,6 +442,10 @@ checkbox {
   z-index: 1001;
   animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   box-shadow: 0 -4rpx 40rpx rgba(0, 0, 0, 0.2);
+  transition: bottom 0.3s ease;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
 }
 
 @keyframes slideUp {
@@ -478,6 +482,8 @@ checkbox {
 
 .paste-content {
   padding: 30rpx 40rpx;
+  flex: 1;
+  overflow-y: auto;
 }
 
 .paste-textarea {
@@ -488,8 +494,15 @@ checkbox {
   padding: 28rpx;
   font-size: 30rpx;
   min-height: 220rpx;
+  max-height: 300rpx;
   line-height: 1.6;
   box-sizing: border-box;
+  transition: border-color 0.2s ease;
+}
+
+.paste-textarea:focus {
+  border-color: #ff6034;
+  background-color: #ffffff;
 }
 
 .paste-tip {

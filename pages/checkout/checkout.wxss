@@ -237,6 +237,93 @@ page {
   opacity: 0.9;
 }
 
+/* 付款状态选择 */
+.payment-status-section {
+  background-color: #ffffff;
+  border-radius: 16rpx;
+  padding: 32rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
+}
+
+.payment-options {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  margin-top: 24rpx;
+}
+
+.payment-option {
+  display: flex;
+  align-items: center;
+  padding: 24rpx;
+  border: 2rpx solid #e8e8e8;
+  border-radius: 12rpx;
+  background-color: #fafafa;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.payment-option.selected {
+  border-color: #ff6034;
+  background-color: #fff7e6;
+  box-shadow: 0 2rpx 8rpx rgba(255, 96, 52, 0.1);
+}
+
+.payment-option:active {
+  transform: scale(0.98);
+}
+
+.option-icon {
+  font-size: 48rpx;
+  margin-right: 20rpx;
+}
+
+.option-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.option-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333333;
+}
+
+.option-desc {
+  font-size: 26rpx;
+  color: #666666;
+  line-height: 1.4;
+}
+
+.option-radio {
+  width: 40rpx;
+  height: 40rpx;
+  border: 3rpx solid #cccccc;
+  border-radius: 50%;
+  background-color: #ffffff;
+  transition: all 0.2s;
+}
+
+.option-radio.checked {
+  border-color: #ff6034;
+  background-color: #ff6034;
+  position: relative;
+}
+
+.option-radio.checked::after {
+  content: "✓";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #ffffff;
+  font-size: 24rpx;
+  font-weight: bold;
+}
+
 /* 隐藏Canvas */
 .result-canvas {
   position: fixed;

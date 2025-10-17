@@ -239,14 +239,14 @@ function extractProvinceCityDistrictEnhanced(text) {
 
   // 省份匹配规则（增强识别能力）
   const provinceRules = [
-    // 直辖市
-    { pattern: /(北京|天津|上海|重庆)(?:市)?(?!\s*[路街巷道])/g, suffix: '市' },
+    // 直辖市（优先匹配，避免与普通城市混淆）
+    { pattern: /(北京|天津|上海|重庆)(?:市)?(?!\s*[路街巷道])/g, suffix: '市', type: 'municipality' },
     // 普通省份
-    { pattern: /(河北|山西|辽宁|吉林|黑龙江|江苏|浙江|安徽|福建|江西|山东|河南|湖北|湖南|广东|海南|四川|贵州|云南|陕西|甘肃|青海|台湾)(?:省)?/g, suffix: '省' },
+    { pattern: /(河北|山西|辽宁|吉林|黑龙江|江苏|浙江|安徽|福建|江西|山东|河南|湖北|湖南|广东|海南|四川|贵州|云南|陕西|甘肃|青海|台湾)(?:省)?/g, suffix: '省', type: 'province' },
     // 自治区
-    { pattern: /(内蒙古|广西|西藏|宁夏|新疆)(?:壮族|维吾尔|回族)?(?:自治区)?/g, suffix: '自治区' },
+    { pattern: /(内蒙古|广西|西藏|宁夏|新疆)(?:壮族|维吾尔|回族)?(?:自治区)?/g, suffix: '自治区', type: 'autonomous' },
     // 特别行政区
-    { pattern: /(香港|澳门)(?:特别行政区)?/g, suffix: '特别行政区' }
+    { pattern: /(香港|澳门)(?:特别行政区)?/g, suffix: '特别行政区', type: 'special' }
   ];
 
   // 匹配省份（全局搜索，找到最可能的省份）
@@ -257,14 +257,15 @@ function extractProvinceCityDistrictEnhanced(text) {
       const provinceName = match[1];
       
       // 标准化省份名称
-      if (['北京', '天津', '上海', '重庆'].includes(provinceName)) {
-        province = provinceName + '市';
-      } else if (['内蒙古', '广西', '西藏', '宁夏', '新疆'].includes(provinceName)) {
+      if (rule.type === 'municipality') {
+        // 直辖市：省份去掉"市"字，城市设为完整名称
+        province = provinceName;
+      } else if (rule.type === 'autonomous') {
         province = provinceName;
         if (!province.includes('自治区')) {
           province += '自治区';
         }
-      } else if (['香港', '澳门'].includes(provinceName)) {
+      } else if (rule.type === 'special') {
         province = provinceName + '特别行政区';
       } else {
         province = provinceName + '省';
@@ -296,9 +297,16 @@ function extractProvinceCityDistrictEnhanced(text) {
     }
   }
 
-  // 如果是直辖市且没有匹配到城市，城市设为省份
-  if (province && MUNICIPALITIES.some(m => province.includes(m)) && !city) {
-    city = province;
+  // 直辖市特殊处理：确保城市名称正确
+  if (province && MUNICIPALITIES.includes(province)) {
+    // 如果没有匹配到城市，城市设为完整名称
+    if (!city) {
+      city = province + '市';
+    }
+    // 如果城市名称不正确（不包含"市"），修正为完整名称
+    else if (!city.includes('市')) {
+      city = province + '市';
+    }
   }
 
   // 区县匹配规则

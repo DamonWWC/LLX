@@ -10,6 +10,7 @@ Page({
     totalShipping: 0,          // 运费总计
     grandTotal: 0,             // 总计
     selectedAddress: null,     // 选中的收货地址
+    paymentStatus: '未付款',   // 付款状态：已付款/未付款
     
     // Canvas相关
     canvasWidth: 0,
@@ -100,9 +101,18 @@ Page({
     })
   },
 
+  // 选择付款状态
+  selectPaymentStatus(e) {
+    const status = e.currentTarget.dataset.status
+    this.setData({
+      paymentStatus: status
+    })
+    console.log('选择付款状态:', status)
+  },
+
   // 确认下单
   confirmOrder() {
-    const { selectedAddress, selectedProducts, totalRicePrice, totalWeight, shippingRate, totalShipping, grandTotal } = this.data
+    const { selectedAddress, selectedProducts, totalRicePrice, totalWeight, shippingRate, totalShipping, grandTotal, paymentStatus } = this.data
 
     if (!selectedAddress) {
       wx.showToast({
@@ -110,6 +120,14 @@ Page({
         icon: 'none'
       })
       return
+    }
+
+    // 根据付款状态确定订单状态（确保没有空格）
+    let orderStatus = ''
+    if (paymentStatus === '已付款') {
+      orderStatus = '待发货'.trim()
+    } else {
+      orderStatus = '待付款'.trim()
     }
 
     // 生成订单
@@ -123,7 +141,8 @@ Page({
       shippingRate: shippingRate,          // 运费单价
       totalShipping: totalShipping,        // 运费总计
       grandTotal: grandTotal,              // 总计
-      status: '待发货',
+      paymentStatus: paymentStatus,        // 付款状态
+      status: orderStatus,                 // 订单状态
       createTime: this.formatDateTime(new Date())
     }
 
@@ -135,34 +154,16 @@ Page({
       
       console.log('订单已保存:', order)
 
-      // 先显示下单成功提示
+      // 显示下单成功提示
       wx.showToast({
         title: '下单成功！',
         icon: 'success',
         duration: 1500
       })
 
-      // 1.5秒后显示操作选项
+      // 1.5秒后直接返回首页
       setTimeout(() => {
-        wx.showActionSheet({
-          itemList: ['生成并保存订单图片', '分享订单到微信', '直接返回首页'],
-          success: (res) => {
-            if (res.tapIndex === 0) {
-              // 生成并保存订单图片
-              this.generateOrderImage(order, 'save')
-            } else if (res.tapIndex === 1) {
-              // 分享订单
-              this.generateOrderImage(order, 'share')
-            } else if (res.tapIndex === 2) {
-              // 直接返回首页
-              this.returnToHome()
-            }
-          },
-          fail: () => {
-            // 用户取消，直接返回首页
-            this.returnToHome()
-          }
-        })
+        this.returnToHome()
       }, 1500)
     } catch (error) {
       console.error('保存订单失败', error)

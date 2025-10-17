@@ -1,0 +1,27 @@
+✅ 订单页面标题动态显示完成
+
+修改内容：
+- 订单页面的导航栏标题现在会根据订单状态动态显示
+- 使用 wx.setNavigationBarTitle API 实时更新页面标题
+
+标题显示逻辑：
+📋 待付款页面：标题显示为"待付款"
+📋 待发货页面：标题显示为"待发货"  
+📋 已发货页面：标题显示为"已发货"
+📋 全部订单页面：标题显示为"订单管理"
+
+技术实现：
+- 在 onLoad 方法中获取 URL 参数中的 status
+- 根据 filterStatus 设置对应的页面标题
+- 使用 wx.setNavigationBarTitle 动态更新导航栏标题
+
+用户体验：
+✓ 页面标题清晰表明当前查看的订单状态
+✓ 导航更加直观，用户知道自己在哪个页面
+✓ 提升应用的导航体验
+
+URL 参数示例：
+- /pages/orders/orders?status=待付款
+- /pages/orders/orders?status=待发货
+- /pages/orders/orders?status=已发货
+- /pages/orders/orders (无参数时显示"订单管理")

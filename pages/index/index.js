@@ -511,7 +511,7 @@ Page({
           const order = {
             id: Date.now(), // 使用时间戳作为订单ID
             orderNo: 'ORD' + Date.now(), // 订单号
-            status: '待发货',
+            status: '待付款',
             products: selectedProducts,
             address: selectedAddress,
             totalRicePrice: totalRicePrice,

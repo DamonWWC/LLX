@@ -162,7 +162,7 @@
 
   <!-- 智能粘贴弹窗 -->
   <view class="modal-mask" wx:if="{{showPasteDialog}}" bindtap="closePasteDialog"></view>
-  <view class="paste-dialog" wx:if="{{showPasteDialog}}">
+  <view class="paste-dialog" wx:if="{{showPasteDialog}}" style="bottom: {{keyboardHeight > 0 ? keyboardHeight + 'px' : '50px'}};">
     <view class="paste-header">
       <text class="paste-title">粘贴地址信息</text>
       <text class="paste-close" bindtap="closePasteDialog">×</text>

@@ -60,6 +60,31 @@
         <text class="summary-value grand">¥{{grandTotal}}</text>
       </view>
     </view>
+
+    <view class="divider"></view>
+
+    <!-- 付款状态选择 -->
+    <view class="payment-status-section">
+      <view class="section-title">付款状态</view>
+      <view class="payment-options">
+        <view class="payment-option {{paymentStatus === '已付款' ? 'selected' : ''}}" bindtap="selectPaymentStatus" data-status="已付款">
+          <view class="option-icon">✅</view>
+          <view class="option-content">
+            <text class="option-title">已付款</text>
+            <text class="option-desc">订单将直接进入待发货状态</text>
+          </view>
+          <view class="option-radio {{paymentStatus === '已付款' ? 'checked' : ''}}"></view>
+        </view>
+        <view class="payment-option {{paymentStatus === '未付款' ? 'selected' : ''}}" bindtap="selectPaymentStatus" data-status="未付款">
+          <view class="option-icon">⏰</view>
+          <view class="option-content">
+            <text class="option-title">未付款</text>
+            <text class="option-desc">订单将进入待付款状态</text>
+          </view>
+          <view class="option-radio {{paymentStatus === '未付款' ? 'checked' : ''}}"></view>
+        </view>
+      </view>
+    </view>
   </view>
 
   <!-- 底部提交按钮 -->

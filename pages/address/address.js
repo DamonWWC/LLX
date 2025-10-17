@@ -22,7 +22,8 @@ Page({
     
     // 智能识别
     pasteText: '',
-    showPasteDialog: false
+    showPasteDialog: false,
+    keyboardHeight: 0     // 键盘高度
   },
 
   onLoad(options) {
@@ -36,6 +37,29 @@ Page({
     
     // 加载本地地址数据
     this.loadAddressList()
+    
+    // 监听键盘高度变化
+    this.setupKeyboardListener()
+  },
+
+  onUnload() {
+    // 移除键盘监听
+    this.removeKeyboardListener()
+  },
+
+  // 设置键盘监听
+  setupKeyboardListener() {
+    // 监听键盘弹起
+    wx.onKeyboardHeightChange((res) => {
+      this.setData({
+        keyboardHeight: res.height
+      })
+    })
+  },
+
+  // 移除键盘监听
+  removeKeyboardListener() {
+    // 微信小程序会自动管理，但为了代码完整性保留此方法
   },
 
   // 加载地址列表
