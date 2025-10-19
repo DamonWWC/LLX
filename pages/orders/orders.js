@@ -959,21 +959,16 @@ Page({
       ctx.fillText('商品明细', 20, y)
       y += 35
 
-      // 商品列表（包含详细数量和种类）
+      // 商品列表（包含详细数量和种类）- 一行显示
       order.products.forEach((item, index) => {
-        const totalWeight = (item.quantity || 0) * (item.weight || 0)
+        // 商品信息一行显示 - 使用大字体和醒目颜色
+        ctx.font = 'bold 20px sans-serif'
+        ctx.fillStyle = '#1890ff'  // 蓝色突出显示
         
-        // 商品名称可能需要换行
-        ctx.font = 'bold 17px sans-serif'
-        ctx.fillStyle = '#333333'
-        const productName = `${index + 1}.${item.name}（${item.weight || 10}斤/${item.unit || '袋'}）`
-        const nameLines = this.wrapText(ctx, productName, 20, y, width - 40, 24)
-        y += nameLines * 24 + 5
-
-        ctx.font = '16px sans-serif'
-        ctx.fillStyle = '#666666'
-        ctx.fillText(`   数量：${item.quantity}${item.unit || '袋'} ，总重：${totalWeight}斤`, 20, y)
-        y += 30  // 增加商品间距
+        // 格式：1.稻花香（10斤/箱）数量：2箱
+        const productInfo = `${index + 1}.${item.name}（${item.weight || 10}斤/${item.unit || '袋'}）数量：${item.quantity}${item.unit || '袋'}`
+        const infoLines = this.wrapText(ctx, productInfo, 20, y, width - 40, 25)
+        y += infoLines * 25 + 15  // 调整行间距
       })
 
       y += 10
@@ -996,21 +991,22 @@ Page({
         }
       })
 
-      ctx.font = 'bold 18px sans-serif'
+      ctx.font = 'bold 20px sans-serif'
       ctx.fillStyle = '#333333'
       ctx.fillText('总计信息', 20, y)
-      y += 30
-
-      ctx.font = '16px sans-serif'
-      ctx.fillStyle = '#666666'
-      ctx.fillText(`商品总数：${totalQuantity} 份`, 20, y)
-      y += 30
-
-      // 总重量（加粗显示）
-      ctx.font = 'bold 18px sans-serif'
-      ctx.fillStyle = '#ff6034'
-      ctx.fillText(`商品总重：${order.totalWeight || totalWeight} 斤`, 20, y)
       y += 35
+
+      // 商品总数 - 突出显示
+      ctx.font = 'bold 22px sans-serif'
+      ctx.fillStyle = '#ff6034'  // 橙色突出显示
+      ctx.fillText(`商品总数：${totalQuantity} 份`, 20, y)
+      y += 35
+
+      // 总重量 - 突出显示
+      ctx.font = 'bold 22px sans-serif'
+      ctx.fillStyle = '#52c41a'  // 绿色突出显示
+      ctx.fillText(`商品总重：${order.totalWeight || totalWeight} 斤`, 20, y)
+      y += 40
 
       // 分割线
       ctx.strokeStyle = '#eeeeee'
