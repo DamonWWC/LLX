@@ -1,0 +1,97 @@
+// 全局Sass变量
+// 颜色变量
+$primary-color: #ff6034;
+$primary-light: #ff8a65;
+$primary-dark: #d84315;
+$secondary-color: #ee0a24;
+$success-color: #67c23a;
+$success-light: #95d475;
+$warning-color: #e6a23c;
+$warning-light: #f0c78a;
+$danger-color: #f56c6c;
+$danger-light: #f89898;
+$info-color: #909399;
+$info-light: #b3b6bb;
+
+// 渐变色
+$primary-gradient: linear-gradient(135deg, $primary-color, $secondary-color);
+
+// 文字颜色
+$text-primary: #333333;
+$text-regular: #666666;
+$text-secondary: #999999;
+$text-placeholder: #c0c4cc;
+
+// 背景色
+$bg-primary: #ffffff;
+$bg-secondary: #f5f5f5;
+$bg-tertiary: #fafafa;
+
+// 边框色
+$border-light: #e8e8e8;
+$border-base: #dcdfe6;
+$border-dark: #d4d7de;
+
+// 阴影
+$shadow-light: 0 2px 8px rgba(0, 0, 0, 0.1);
+$shadow-base: 0 4px 12px rgba(0, 0, 0, 0.15);
+$shadow-dark: 0 8px 24px rgba(0, 0, 0, 0.2);
+
+// 圆角
+$border-radius-small: 4px;
+$border-radius-base: 6px;
+$border-radius-large: 8px;
+$border-radius-round: 50%;
+
+// 间距
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 12px;
+$spacing-lg: 16px;
+$spacing-xl: 20px;
+$spacing-xxl: 24px;
+
+// 字体大小
+$font-size-xs: 12px;
+$font-size-sm: 14px;
+$font-size-base: 16px;
+$font-size-lg: 18px;
+$font-size-xl: 20px;
+$font-size-xxl: 24px;
+
+// 字体粗细
+$font-weight-normal: 400;
+$font-weight-medium: 500;
+$font-weight-semibold: 600;
+$font-weight-bold: 700;
+
+// 行高
+$line-height-base: 1.5;
+$line-height-tight: 1.2;
+$line-height-loose: 1.8;
+
+// 断点
+$breakpoint-xs: 480px;
+$breakpoint-sm: 768px;
+$breakpoint-md: 992px;
+$breakpoint-lg: 1200px;
+$breakpoint-xl: 1920px;
+
+// Z-index层级
+$z-index-dropdown: 1000;
+$z-index-sticky: 1020;
+$z-index-fixed: 1030;
+$z-index-modal-backdrop: 1040;
+$z-index-modal: 1050;
+$z-index-popover: 1060;
+$z-index-tooltip: 1070;
+
+// 动画时间
+$transition-fast: 0.2s;
+$transition-base: 0.3s;
+$transition-slow: 0.5s;
+
+// 动画函数
+$ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+$ease-out: cubic-bezier(0, 0, 0.2, 1);
+$ease-in: cubic-bezier(0.4, 0, 1, 1);
