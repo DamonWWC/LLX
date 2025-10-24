@@ -1,5 +1,5 @@
 // pages/checkout/checkout.js
-const shippingConfig = require('../../utils/shippingConfig.js');
+const apiManager = require('../../utils/apiManager.js');
 
 Page({
   data: {
@@ -31,16 +31,29 @@ Page({
 
   onShow() {
     // 每次显示页面时重新加载数据（从地址页面返回时更新地址）
+    // 但保持已选择的地址不被覆盖
     this.loadCheckoutData()
+  },
+
+  // 从API计算运费
+  async calculateShippingFromAPI(weight, province) {
+    try {
+      const result = await apiManager.shippingManager.calculateShipping(province, weight)
+      return result
+    } catch (error) {
+      console.error('API计算运费失败:', error)
+      throw error
+    }
   },
 
   // 加载结算数据
   loadCheckoutData() {
     try {
-      // 从本地存储获取结算数据
+      // 从本地存储获取结算数据（仅用于商品信息）
       const checkoutData = wx.getStorageSync('checkoutData')
       if (checkoutData) {
-        const selectedAddress = checkoutData.selectedAddress || null
+        // 保持当前选中的地址（如果已选择）
+        const selectedAddress = this.data.selectedAddress || checkoutData.selectedAddress || null
         const selectedProducts = checkoutData.selectedProducts || []
         const totalRicePrice = parseFloat(checkoutData.totalRicePrice) || 0
         
@@ -51,34 +64,88 @@ Page({
         })
         
         // 计算运费
-        let shippingRate = 0
-        let totalShipping = 0
+        let shippingRate = 1.4  // 默认运费单价
+        let totalShipping = totalWeight * shippingRate  // 默认运费总计
         
         if (selectedAddress && selectedAddress.province) {
-          const shippingInfo = shippingConfig.calculateShipping(totalWeight, selectedAddress.province)
-          shippingRate = shippingInfo.rate
-          totalShipping = shippingInfo.shipping
+          console.log('开始计算运费:', {
+            province: selectedAddress.province,
+            weight: totalWeight
+          })
+          
+          // 使用API计算运费
+          this.calculateShippingFromAPI(totalWeight, selectedAddress.province)
+            .then(shippingInfo => {
+              console.log('API计算运费成功:', shippingInfo)
+              
+              // 检查API返回的数据结构
+              if (shippingInfo && typeof shippingInfo.rate === 'number' && typeof shippingInfo.totalShipping === 'number') {
+                this.setData({
+                  shippingRate: shippingInfo.rate,
+                  totalShipping: shippingInfo.totalShipping,
+                  grandTotal: (totalRicePrice + shippingInfo.totalShipping).toFixed(2)
+                })
+              } else {
+                console.warn('API返回的运费数据格式不正确:', shippingInfo)
+                // 使用默认运费
+                const defaultRate = 1.4
+                const defaultShipping = totalWeight * defaultRate
+                this.setData({
+                  shippingRate: defaultRate,
+                  totalShipping: defaultShipping,
+                  grandTotal: (totalRicePrice + defaultShipping).toFixed(2)
+                })
+              }
+            })
+            .catch(error => {
+              console.error('计算运费失败:', error)
+              // 如果API失败，使用默认运费
+              const defaultRate = 1.4
+              const defaultShipping = totalWeight * defaultRate
+              console.log('使用默认运费:', {
+                rate: defaultRate,
+                shipping: defaultShipping
+              })
+              this.setData({
+                shippingRate: defaultRate,
+                totalShipping: defaultShipping,
+                grandTotal: (totalRicePrice + defaultShipping).toFixed(2)
+              })
+            })
+        } else {
+          console.log('没有地址信息，使用默认运费:', {
+            hasAddress: !!selectedAddress,
+            province: selectedAddress?.province
+          })
         }
         
-        // 计算总价
-        const grandTotal = (totalRicePrice + totalShipping).toFixed(2)
+        // 计算初始总价
+        const initialGrandTotal = totalRicePrice + totalShipping
         
-        this.setData({
+        // 设置基础数据（使用默认运费，API回调时会更新）
+        // 只在首次加载或没有选中地址时设置地址
+        const updateData = {
           selectedProducts: selectedProducts,
           totalRicePrice: totalRicePrice.toFixed(2),
           totalWeight: totalWeight,
           shippingRate: shippingRate,
           totalShipping: totalShipping,
-          grandTotal: grandTotal,
-          selectedAddress: selectedAddress
-        })
+          grandTotal: initialGrandTotal.toFixed(2)
+        }
+        
+        // 只在没有选中地址时才设置地址
+        if (!this.data.selectedAddress) {
+          updateData.selectedAddress = selectedAddress
+        }
+        
+        this.setData(updateData)
         
         console.log('加载结算数据:', {
           totalRicePrice,
           totalWeight,
           shippingRate,
           totalShipping,
-          grandTotal
+          grandTotal: initialGrandTotal
         })
       } else {
         wx.showToast({
@@ -111,7 +178,7 @@ Page({
   },
 
   // 确认下单
-  confirmOrder() {
+  async confirmOrder() {
     const { selectedAddress, selectedProducts, totalRicePrice, totalWeight, shippingRate, totalShipping, grandTotal, paymentStatus } = this.data
 
     if (!selectedAddress) {
@@ -122,37 +189,41 @@ Page({
       return
     }
 
-    // 根据付款状态确定订单状态（确保没有空格）
-    let orderStatus = ''
-    if (paymentStatus === '已付款') {
-      orderStatus = '待发货'.trim()
-    } else {
-      orderStatus = '待付款'.trim()
-    }
+    // 显示加载状态
+    wx.showLoading({
+      title: '下单中...',
+      mask: true
+    })
 
-    // 生成订单
-    const order = {
-      id: Date.now(),
-      orderNo: 'ORD' + Date.now(),
-      products: selectedProducts,
-      address: selectedAddress,
-      totalRicePrice: totalRicePrice,      // 商品总价
-      totalWeight: totalWeight,            // 总重量
-      shippingRate: shippingRate,          // 运费单价
-      totalShipping: totalShipping,        // 运费总计
-      grandTotal: grandTotal,              // 总计
-      paymentStatus: paymentStatus,        // 付款状态
-      status: orderStatus,                 // 订单状态
-      createTime: this.formatDateTime(new Date())
-    }
-
-    // 保存订单到本地存储
     try {
-      const orderList = wx.getStorageSync('orderList') || []
-      orderList.unshift(order)  // 添加到开头
-      wx.setStorageSync('orderList', orderList)  // 保存整个订单列表
+      // 根据付款状态确定订单状态（确保没有空格）
+      let orderStatus = ''
+      if (paymentStatus === '已付款') {
+        orderStatus = '待发货'.trim()
+      } else {
+        orderStatus = '待付款'.trim()
+      }
+
+      // 准备订单数据
+      const orderData = {
+        products: selectedProducts,
+        address: selectedAddress,
+        totalRicePrice: totalRicePrice,      // 商品总价
+        totalWeight: totalWeight,            // 总重量
+        shippingRate: shippingRate,          // 运费单价
+        totalShipping: totalShipping,        // 运费总计
+        grandTotal: grandTotal,              // 总计
+        paymentStatus: paymentStatus,        // 付款状态
+        status: orderStatus,                 // 订单状态
+        createTime: this.formatDateTime(new Date())
+      }
+
+      // 使用API管理器创建订单
+      const order = await apiManager.orderManager.createOrder(orderData)
       
       console.log('订单已保存:', order)
+
+      wx.hideLoading()
 
       // 显示下单成功提示
       wx.showToast({
@@ -166,7 +237,8 @@ Page({
         this.returnToHome()
       }, 1500)
     } catch (error) {
-      console.error('保存订单失败', error)
+      wx.hideLoading()
+      console.error('下单失败', error)
       wx.showToast({
         title: '下单失败，请重试',
         icon: 'none'
@@ -469,16 +541,7 @@ Page({
 
   // 返回首页
   returnToHome() {
-    // 清空临时数据
-    wx.removeStorageSync('checkoutData')
-    
-    // 清空购物车
-    const riceProducts = wx.getStorageSync('riceProducts') || []
-    const clearedProducts = riceProducts.map(product => ({
-      ...product,
-      quantity: 0
-    }))
-    wx.setStorageSync('riceProducts', clearedProducts)
+    // 数据已通过API管理，无需清空本地存储
     
     // 返回首页
     wx.reLaunch({

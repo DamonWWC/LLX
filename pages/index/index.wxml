@@ -42,7 +42,7 @@
       <view class="product-info">
         <view class="product-name">{{item.name}}</view>
         <view class="product-price">
-          <text class="price-value">¥{{item.price}}</text>
+          <text class="price-value">{{item.price}}</text>
           <text class="price-unit">/{{item.unit}}</text>
         </view>
         <view class="product-weight">📦 {{item.weight}}斤/{{item.unit}}</view>

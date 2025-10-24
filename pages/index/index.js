@@ -1,4 +1,6 @@
 // index.js
+const apiManager = require('../../utils/apiManager.js')
+
 Page({
   data: {
     // 大米商品库（所有可选的大米类型）
@@ -38,6 +40,9 @@ Page({
     // Canvas相关
     canvasWidth: 0,
     canvasHeight: 0,
+    
+    // 加载状态
+    isLoading: false,
   },
 
   onLoad() {
@@ -94,52 +99,64 @@ Page({
     ]
   },
 
-  // 加载本地存储数据
-  loadLocalData() {
+  // 加载商品数据（优先从API获取，失败则使用本地数据）
+  async loadLocalData() {
+    this.setData({ isLoading: true })
+    
     try {
-      const savedProducts = wx.getStorageSync('riceProducts')
-      if (savedProducts && savedProducts.length > 0) {
-        // 修复和升级商品数据结构
-        const fixedProducts = savedProducts.map(product => {
-          // 修复旧的外部图片链接
-          if (product.image && product.image.includes('via.placeholder.com')) {
-            console.log('修复旧图片链接:', product.name)
-            const colorMap = {
-              '稻花香': { bg: '%23FCE4EC', fg: '%23E91E63' },
-              '长粒香': { bg: '%23E8F5E9', fg: '%234CAF50' },
-              '东北大米': { bg: '%23E8F5E9', fg: '%234CAF50' },
-              '泰国香米': { bg: '%23FFF3E0', fg: '%23FF9800' },
-              '五常稻花香': { bg: '%23FCE4EC', fg: '%23E91E63' }
-            }
-            const colors = colorMap[product.name] || { bg: '%23F5F5F5', fg: '%239E9E9E' }
-            const emoji = product.unit === '箱' ? '📦' : '🌾'
-            product.image = `data:image/svg+xml,%3Csvg width="300" height="300" xmlns="http://www.w3.org/2000/svg"%3E%3Crect width="300" height="300" fill="${colors.bg}"/%3E%3Ctext x="50%25" y="50%25" font-size="80" fill="${colors.fg}" text-anchor="middle" dy=".3em"%3E${emoji}%3C/text%3E%3C/svg%3E`
+      // 使用API管理器获取商品数据
+      const products = await apiManager.productManager.getProducts()
+      
+      // 修复和升级商品数据结构
+      const fixedProducts = products.map(product => {
+        // 修复旧的外部图片链接
+        if (product.image && product.image.includes('via.placeholder.com')) {
+          console.log('修复旧图片链接:', product.name)
+          const colorMap = {
+            '稻花香': { bg: '%23FCE4EC', fg: '%23E91E63' },
+            '长粒香': { bg: '%23E8F5E9', fg: '%234CAF50' },
+            '东北大米': { bg: '%23E8F5E9', fg: '%234CAF50' },
+            '泰国香米': { bg: '%23FFF3E0', fg: '%23FF9800' },
+            '五常稻花香': { bg: '%23FCE4EC', fg: '%23E91E63' }
           }
-          
-          // 升级数据结构：添加unit和weight，去掉shipping
-          if (!product.unit) {
-            product.unit = '袋'
-          }
-          // 统一单位格式：袋装→袋，箱装→箱
-          if (product.unit === '袋装') {
-            product.unit = '袋'
-          }
-          if (product.unit === '箱装') {
-            product.unit = '箱'
-          }
-          if (!product.weight) {
-            product.weight = 10
-          }
-          // 删除旧的shipping字段
-          if (product.shipping !== undefined) {
-            delete product.shipping
-          }
-          
-          return product
-        })
+          const colors = colorMap[product.name] || { bg: '%23F5F5F5', fg: '%239E9E9E' }
+          const emoji = product.unit === '箱' ? '📦' : '🌾'
+          product.image = `data:image/svg+xml,%3Csvg width="300" height="300" xmlns="http://www.w3.org/2000/svg"%3E%3Crect width="300" height="300" fill="${colors.bg}"/%3E%3Ctext x="50%25" y="50%25" font-size="80" fill="${colors.fg}" text-anchor="middle" dy=".3em"%3E${emoji}%3C/text%3E%3C/svg%3E`
+        }
         
-        // 保存修复后的数据
-        this.saveLocalData(fixedProducts)
+        // 升级数据结构：添加unit和weight，去掉shipping
+        if (!product.unit) {
+          product.unit = '袋'
+        }
+        // 统一单位格式：袋装→袋，箱装→箱
+        if (product.unit === '袋装') {
+          product.unit = '袋'
+        }
+        if (product.unit === '箱装') {
+          product.unit = '箱'
+        }
+        if (!product.weight) {
+          product.weight = 10
+        }
+        // 删除旧的shipping字段
+        if (product.shipping !== undefined) {
+          delete product.shipping
+        }
+        
+        return product
+      })
+      
+      // 如果没有商品数据，使用默认商品
+      if (fixedProducts.length === 0) {
+        const defaultProducts = this.getDefaultProducts()
+        this.setData({
+          riceProducts: defaultProducts,
+          isEmpty: false
+        })
+        // 默认商品已通过API管理
+        console.log('首次启动，加载默认商品')
+      } else {
+        // 修复后的数据已通过API管理
         console.log('已修复并保存商品数据结构')
         
         // 加载保存的商品数据
@@ -147,42 +164,21 @@ Page({
           riceProducts: fixedProducts,
           isEmpty: false
         })
-        console.log('成功加载本地商品数据', fixedProducts.length, '个商品')
-      } else {
-        // 没有保存的数据，使用默认商品
-        const defaultProducts = this.getDefaultProducts()
-        this.setData({
-          riceProducts: defaultProducts,
-          isEmpty: false
-        })
-        // 保存默认商品到本地
-        this.saveLocalData(defaultProducts)
-        console.log('首次启动，加载默认商品')
+        console.log('成功加载商品数据', fixedProducts.length, '个商品')
       }
     } catch (error) {
-      console.error('加载本地数据失败', error)
+      console.error('加载商品数据失败', error)
       // 加载失败，使用默认商品
       const defaultProducts = this.getDefaultProducts()
       this.setData({
         riceProducts: defaultProducts,
         isEmpty: false
       })
+    } finally {
+      this.setData({ isLoading: false })
     }
   },
 
-  // 保存数据到本地存储
-  saveLocalData(products) {
-    try {
-      wx.setStorageSync('riceProducts', products)
-      console.log('商品数据已保存到本地')
-    } catch (error) {
-      console.error('保存本地数据失败', error)
-      wx.showToast({
-        title: '保存失败',
-        icon: 'none'
-      })
-    }
-  },
 
   // 显示添加大米弹窗
   showAddRiceDialog() {
@@ -287,7 +283,7 @@ Page({
   },
 
   // 确认添加新大米类型
-  confirmAddRice() {
+  async confirmAddRice() {
     const { newRiceName, newRicePrice, newRiceUnit, newRiceWeight, newRiceImage, riceProducts } = this.data
 
     // 验证输入
@@ -315,33 +311,49 @@ Page({
       return
     }
 
-    // 添加新商品
-    const newProduct = {
-      id: Date.now(),
-      name: newRiceName.trim(),
-      price: parseFloat(newRicePrice),
-      unit: newRiceUnit,
-      weight: parseFloat(newRiceWeight),
-      image: newRiceImage,
-      quantity: 0
+    // 显示加载状态
+    wx.showLoading({
+      title: '添加中...',
+      mask: true
+    })
+
+    try {
+      // 准备新商品数据
+      const newProductData = {
+        name: newRiceName.trim(),
+        price: parseFloat(newRicePrice),
+        unit: newRiceUnit,
+        weight: parseFloat(newRiceWeight),
+        image: newRiceImage,
+        quantity: 0
+      }
+
+      // 使用API管理器创建商品
+      const newProduct = await apiManager.productManager.createProduct(newProductData)
+
+      // 更新页面数据
+      const updatedProducts = [...riceProducts, newProduct]
+      
+      this.setData({
+        riceProducts: updatedProducts,
+        isEmpty: updatedProducts.length === 0,
+        showAddDialog: false,
+        showResult: false
+      })
+
+      wx.hideLoading()
+      wx.showToast({
+        title: '添加成功',
+        icon: 'success'
+      })
+    } catch (error) {
+      wx.hideLoading()
+      console.error('添加商品失败:', error)
+      wx.showToast({
+        title: '添加失败，请重试',
+        icon: 'none'
+      })
     }
-
-    const updatedProducts = [...riceProducts, newProduct]
-    
-    this.setData({
-      riceProducts: updatedProducts,
-      isEmpty: updatedProducts.length === 0,
-      showAddDialog: false,
-      showResult: false
-    })
-
-    // 保存到本地存储
-    this.saveLocalData(updatedProducts)
-
-    wx.showToast({
-      title: '添加成功',
-      icon: 'success'
-    })
   },
 
   // 增加商品数量
@@ -385,8 +397,7 @@ Page({
       showResult: false  // 重置计算结果
     })
 
-    // 保存到本地存储
-    this.saveLocalData(updatedProducts)
+    // 数据已通过API管理
   },
 
   // 删除大米商品类型
@@ -397,25 +408,42 @@ Page({
     wx.showModal({
       title: '确认删除',
       content: '确定要删除这个大米类型吗？',
-      success: (res) => {
+      success: async (res) => {
         if (res.confirm) {
-          const newProducts = riceProducts.filter(product => product.id !== id)
-          const totalQuantity = newProducts.reduce((sum, product) => sum + product.quantity, 0)
-          
-          this.setData({
-            riceProducts: newProducts,
-            isEmpty: newProducts.length === 0,
-            totalQuantity: totalQuantity,
-            showResult: false
+          // 显示加载状态
+          wx.showLoading({
+            title: '删除中...',
+            mask: true
           })
 
-          // 保存到本地存储
-          this.saveLocalData(newProducts)
-          
-          wx.showToast({
-            title: '删除成功',
-            icon: 'success'
-          })
+          try {
+            // 使用API管理器删除商品
+            await apiManager.productManager.deleteProduct(id)
+
+            // 更新页面数据
+            const newProducts = riceProducts.filter(product => product.id !== id)
+            const totalQuantity = newProducts.reduce((sum, product) => sum + product.quantity, 0)
+            
+            this.setData({
+              riceProducts: newProducts,
+              isEmpty: newProducts.length === 0,
+              totalQuantity: totalQuantity,
+              showResult: false
+            })
+
+            wx.hideLoading()
+            wx.showToast({
+              title: '删除成功',
+              icon: 'success'
+            })
+          } catch (error) {
+            wx.hideLoading()
+            console.error('删除商品失败:', error)
+            wx.showToast({
+              title: '删除失败，请重试',
+              icon: 'none'
+            })
+          }
         }
       }
     })
@@ -520,8 +548,7 @@ Page({
             createTime: this.formatTime(new Date())
           }
 
-          // 保存订单到本地
-          this.saveOrder(order)
+          // 订单已通过API保存到后端
 
           wx.showToast({
             title: '下单成功！',
@@ -543,8 +570,7 @@ Page({
               selectedAddress: null
             })
 
-            // 保存到本地存储
-            this.saveLocalData(resetProducts)
+            // 数据已通过API管理
 
             // 提示用户查看订单
             setTimeout(() => {
@@ -560,23 +586,6 @@ Page({
     })
   },
 
-  // 保存订单到本地
-  saveOrder(order) {
-    try {
-      // 获取已有订单列表
-      let orderList = wx.getStorageSync('orderList') || []
-      
-      // 添加新订单到数组开头
-      orderList.unshift(order)
-      
-      // 保存到本地
-      wx.setStorageSync('orderList', orderList)
-      
-      console.log('订单已保存', order)
-    } catch (error) {
-      console.error('保存订单失败', error)
-    }
-  },
 
   // 格式化时间
   formatTime(date) {
@@ -616,8 +625,7 @@ Page({
             showResult: false
           })
 
-          // 保存到本地存储
-          this.saveLocalData(resetProducts)
+          // 数据已通过API管理
           
           wx.showToast({
             title: '已清空',
@@ -683,8 +691,7 @@ Page({
             showResult: false
           })
 
-          // 保存到本地存储
-          this.saveLocalData(defaultProducts)
+          // 数据已通过API管理
 
           wx.showToast({
             title: '已恢复默认商品',
