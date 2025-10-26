@@ -5,6 +5,7 @@ Page({
   data: {
     orderList: [],
     filteredOrderList: [],  // 过滤后的订单列表
+    groupedOrderList: [],   // 按日期分组的订单列表
     searchKeyword: '',      // 搜索关键词
     isSearching: false,     // 是否正在搜索
     filterStatus: '',       // 状态过滤
@@ -12,7 +13,8 @@ Page({
     canvasHeight: 600,
     isMultiSelectMode: false, // 是否多选模式
     selectedOrders: [],     // 选中的订单
-    totalAmount: 0          // 选中订单总金额
+    totalAmount: 0,         // 选中订单总金额
+    collapsedDates: {}      // 折叠的日期组
   },
 
   onLoad(options) {
@@ -84,13 +86,110 @@ Page({
         })
       }
       
+      // 按日期分组订单
+      const groupedOrders = this.groupOrdersByDate(filteredOrders)
+      
       this.setData({
         orderList: orderList,
-        filteredOrderList: filteredOrders
+        filteredOrderList: filteredOrders,
+        groupedOrderList: groupedOrders
       })
     } catch (error) {
       console.error('加载订单失败', error)
     }
+  },
+
+  // 按日期分组订单
+  groupOrdersByDate(orders) {
+    const groups = {}
+    
+    orders.forEach(order => {
+      // 从创建时间中提取日期
+      const createTime = order.createTime || ''
+      let dateKey = ''
+      
+      // 尝试解析不同的时间格式
+      if (createTime.includes(' ')) {
+        // 格式如：2024-01-15 14:30:25
+        dateKey = createTime.split(' ')[0]
+      } else if (createTime.includes('T')) {
+        // ISO格式：2024-01-15T14:30:25
+        dateKey = createTime.split('T')[0]
+      } else if (createTime.length >= 10) {
+        // 其他格式，取前10位
+        dateKey = createTime.substring(0, 10)
+      } else {
+        // 如果无法解析，使用"未知日期"
+        dateKey = '未知日期'
+      }
+      
+      if (!groups[dateKey]) {
+        groups[dateKey] = {
+          date: dateKey,
+          displayDate: this.formatDisplayDate(dateKey),
+          orders: [],
+          collapsed: this.data.collapsedDates[dateKey] !== undefined ? this.data.collapsedDates[dateKey] : false
+        }
+      }
+      
+      groups[dateKey].orders.push(order)
+    })
+    
+    // 转换为数组并按日期倒序排列（最新的在前）
+    return Object.values(groups).sort((a, b) => {
+      if (a.date === '未知日期') return 1
+      if (b.date === '未知日期') return -1
+      return new Date(b.date) - new Date(a.date)
+    })
+  },
+
+  // 格式化显示日期
+  formatDisplayDate(dateStr) {
+    if (dateStr === '未知日期') {
+      return '未知日期'
+    }
+    
+    try {
+      const date = new Date(dateStr)
+      const today = new Date()
+      const yesterday = new Date(today)
+      yesterday.setDate(yesterday.getDate() - 1)
+      
+      // 重置时间部分进行比较
+      const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+      const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+      const yesterdayOnly = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate())
+      
+      if (dateOnly.getTime() === todayOnly.getTime()) {
+        return '今天'
+      } else if (dateOnly.getTime() === yesterdayOnly.getTime()) {
+        return '昨天'
+      } else {
+        // 显示月日
+        const month = date.getMonth() + 1
+        const day = date.getDate()
+        return `${month}月${day}日`
+      }
+    } catch (error) {
+      return dateStr
+    }
+  },
+
+  // 切换日期组折叠状态
+  toggleDateGroup(e) {
+    const { date } = e.currentTarget.dataset
+    const collapsedDates = { ...this.data.collapsedDates }
+    collapsedDates[date] = !collapsedDates[date]
+    
+    this.setData({
+      collapsedDates: collapsedDates
+    })
+    
+    // 重新分组以更新折叠状态
+    const groupedOrders = this.groupOrdersByDate(this.data.filteredOrderList)
+    this.setData({
+      groupedOrderList: groupedOrders
+    })
   },
 
   // 查看订单详情
@@ -115,7 +214,8 @@ Page({
     // 关闭其他订单的更多菜单
     const orderList = this.data.orderList.map(order => ({
       ...order,
-      showMoreMenu: order.id === orderid ? !order.showMoreMenu : false
+      showMoreMenu: order.id === orderid ? !order.showMoreMenu : false,
+      menuUpward: order.id === orderid ? !order.showMoreMenu : order.menuUpward // 默认向上展开
     }))
     
     this.setData({
@@ -252,8 +352,12 @@ Page({
         })
       }
       
+      // 重新分组
+      const groupedOrders = this.groupOrdersByDate(filteredOrders)
+      
       this.setData({
         filteredOrderList: filteredOrders,
+        groupedOrderList: groupedOrders,
         isSearching: false
       })
       return
@@ -275,8 +379,12 @@ Page({
       return name.includes(keyword) || phone.includes(keyword)
     })
 
+    // 重新分组
+    const groupedOrders = this.groupOrdersByDate(filteredOrders)
+
     this.setData({
       filteredOrderList: filteredOrders,
+      groupedOrderList: groupedOrders,
       isSearching: true
     })
 
@@ -296,9 +404,13 @@ Page({
       })
     }
     
+    // 重新分组
+    const groupedOrders = this.groupOrdersByDate(filteredOrders)
+    
     this.setData({
       searchKeyword: '',
       filteredOrderList: filteredOrders,
+      groupedOrderList: groupedOrders,
       isSearching: false
     })
   },

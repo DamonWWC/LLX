@@ -30,97 +30,113 @@
     <text class="tip-hint">请检查姓名或电话是否正确</text>
   </view>
 
-  <!-- 订单列表 -->
-  <scroll-view class="order-list" scroll-y wx:if="{{filteredOrderList.length > 0}}">
-    <view class="order-item {{item.selected ? 'selected' : ''}}" wx:for="{{filteredOrderList}}" wx:key="id" bindtap="{{isMultiSelectMode ? 'toggleOrderSelection' : 'viewOrderDetail'}}" data-orderid="{{item.id}}">
-      <!-- 订单头部 -->
-      <view class="order-header">
-        <view class="order-header-left">
-          <view class="checkbox" wx:if="{{isMultiSelectMode}}" bindtap="toggleOrderSelection" data-orderid="{{item.id}}" catchtap="preventBubble">
-            <text class="checkbox-icon {{item.selected ? 'checked' : ''}}">{{item.selected ? '✓' : ''}}</text>
-          </view>
-          <text class="order-no">订单号：{{item.orderNo}}</text>
+  <!-- 订单列表 - 按日期分组 -->
+  <scroll-view class="order-list" scroll-y wx:if="{{groupedOrderList.length > 0}}">
+    <view class="date-group" wx:for="{{groupedOrderList}}" wx:key="date">
+      <!-- 日期分组头部 -->
+      <view class="date-group-header" bindtap="toggleDateGroup" data-date="{{item.date}}">
+        <view class="date-info">
+          <text class="date-display">{{item.displayDate}}</text>
+          <text class="date-count">{{item.orders.length}}个订单</text>
         </view>
-        <text class="order-status">{{item.status}}</text>
-      </view>
-
-      <!-- 订单内容 -->
-      <view class="order-content">
-        <!-- 收货信息 -->
-        <view class="order-address">
-          <text class="address-icon">📍</text>
-          <text class="address-text">{{item.address.name}} {{item.address.phone}}</text>
-        </view>
-
-        <!-- 订单金额和付款状态 -->
-        <view class="order-price-status">
-          <view class="order-price">
-            <text class="price-label">实付款：</text>
-            <text class="price-value">¥{{item.grandTotal}}</text>
-          </view>
-          
-          <!-- 付款状态 - 右侧 -->
-          <view class="order-payment-status" wx:if="{{item.paymentStatus}}">
-            <text class="payment-label">付款状态：</text>
-            <text class="payment-status {{item.paymentStatus === '已付款' ? 'paid' : 'unpaid'}}">{{item.paymentStatus}}</text>
-          </view>
-        </view>
-
-        <!-- 快递信息 -->
-        <view class="shipping-info" wx:if="{{item.trackingNumber}}">
-          <text class="shipping-icon">📦</text>
-          <text class="shipping-label">快递单号：</text>
-          <text class="tracking-number">{{item.trackingNumber}}</text>
-        </view>
-
-        <!-- 发货时间 -->
-        <view class="shipping-time" wx:if="{{item.shippingTime}}">
-          <text class="shipping-time-label">发货时间：</text>
-          <text class="shipping-time-value">{{item.shippingTime}}</text>
-        </view>
-
-        <!-- 订单时间 -->
-        <view class="order-time">
-          <text>{{item.createTime}}</text>
+        <view class="collapse-icon {{item.collapsed ? 'collapsed' : 'expanded'}}">
+          <text>▼</text>
         </view>
       </view>
+      
+      <!-- 订单列表 - 可折叠 -->
+      <view class="date-group-orders {{item.collapsed ? 'collapsed' : ''}}" wx:if="{{!item.collapsed}}">
+        <view class="order-item {{order.selected ? 'selected' : ''}}" wx:for="{{item.orders}}" wx:for-item="order" wx:key="id" bindtap="{{isMultiSelectMode ? 'toggleOrderSelection' : 'viewOrderDetail'}}" data-orderid="{{order.id}}">
+          <!-- 订单头部 -->
+          <view class="order-header">
+            <view class="order-header-left">
+              <view class="checkbox" wx:if="{{isMultiSelectMode}}" bindtap="toggleOrderSelection" data-orderid="{{order.id}}" catchtap="preventBubble">
+                <text class="checkbox-icon {{order.selected ? 'checked' : ''}}">{{order.selected ? '✓' : ''}}</text>
+              </view>
+              <text class="order-no">订单号：{{order.orderNo}}</text>
+            </view>
+            <text class="order-status">{{order.status}}</text>
+          </view>
 
-      <!-- 订单操作 -->
-      <view class="order-actions" catchtap="preventBubble">
-        <!-- 更多按钮 - 最左侧 -->
-        <view class="more-btn-wrapper">
-          <view class="action-btn more-btn" bindtap="toggleMoreMenu" data-orderid="{{item.id}}">
-            <text>更多</text>
-            <text class="arrow {{item.showMoreMenu ? 'up' : 'down'}}">▼</text>
-          </view>
-          
-          <!-- 更多菜单 -->
-          <view class="more-menu {{item.showMoreMenu ? 'show' : ''}}" wx:if="{{item.showMoreMenu}}">
-            <view class="more-menu-item" bindtap="shareOrder" data-orderid="{{item.id}}">
-              <text>分享</text>
+          <!-- 订单内容 -->
+          <view class="order-content">
+            <!-- 收货信息 -->
+            <view class="order-address">
+              <text class="address-icon">📍</text>
+              <text class="address-text">{{order.address.name}} {{order.address.phone}}</text>
             </view>
-            <view class="more-menu-item delete" bindtap="deleteOrder" data-orderid="{{item.id}}">
-              <text>删除</text>
+
+            <!-- 订单金额和付款状态 -->
+            <view class="order-price-status">
+              <view class="order-price">
+                <text class="price-label">实付款：</text>
+                <text class="price-value">¥{{order.grandTotal}}</text>
+              </view>
+              
+              <!-- 付款状态 - 右侧 -->
+              <view class="order-payment-status" wx:if="{{order.paymentStatus}}">
+                <text class="payment-label">付款状态：</text>
+                <text class="payment-status {{order.paymentStatus === '已付款' ? 'paid' : 'unpaid'}}">{{order.paymentStatus}}</text>
+              </view>
+            </view>
+
+            <!-- 快递信息 -->
+            <view class="shipping-info" wx:if="{{order.trackingNumber}}">
+              <text class="shipping-icon">📦</text>
+              <text class="shipping-label">快递单号：</text>
+              <text class="tracking-number">{{order.trackingNumber}}</text>
+            </view>
+
+            <!-- 发货时间 -->
+            <view class="shipping-time" wx:if="{{order.shippingTime}}">
+              <text class="shipping-time-label">发货时间：</text>
+              <text class="shipping-time-value">{{order.shippingTime}}</text>
+            </view>
+
+            <!-- 订单时间 -->
+            <view class="order-time">
+              <text>{{order.createTime}}</text>
             </view>
           </view>
-        </view>
-        
-        <view class="action-btn export" bindtap="exportOrderImage" data-orderid="{{item.id}}">
-          <text>订单</text>
-        </view>
-        <view class="action-btn export-shipping" bindtap="exportShippingList" data-orderid="{{item.id}}">
-          <text>发货单</text>
-        </view>
-        <view class="action-btn tracking-btn" bindtap="editTrackingNumber" data-orderid="{{item.id}}" wx:if="{{item.status === '已发货'}}">
-          <text>快递单号</text>
-        </view>
-        
-        <!-- 状态更新按钮 - 最右侧 -->
-        <view class="action-btn status-update" bindtap="updateOrderStatus" data-orderid="{{item.id}}" data-current-status="{{item.status}}" wx:if="{{item.status === '待付款'}}">
-          <text>确认付款</text>
-        </view>
-        <view class="action-btn status-update" bindtap="updateOrderStatus" data-orderid="{{item.id}}" data-current-status="{{item.status}}" wx:if="{{item.status === '待发货'}}">
-          <text>确认发货</text>
+
+          <!-- 订单操作 -->
+          <view class="order-actions" catchtap="preventBubble">
+            <!-- 更多按钮 - 最左侧 -->
+            <view class="more-btn-wrapper">
+              <view class="action-btn more-btn" bindtap="toggleMoreMenu" data-orderid="{{order.id}}">
+                <text>更多</text>
+                <text class="arrow {{order.showMoreMenu ? 'up' : 'down'}}">▼</text>
+              </view>
+              
+              <!-- 更多菜单 -->
+              <view class="more-menu {{order.showMoreMenu ? 'show' : ''}} {{order.menuUpward ? 'upward' : ''}}" wx:if="{{order.showMoreMenu}}">
+                <view class="more-menu-item" bindtap="shareOrder" data-orderid="{{order.id}}">
+                  <text>分享</text>
+                </view>
+                <view class="more-menu-item delete" bindtap="deleteOrder" data-orderid="{{order.id}}">
+                  <text>删除</text>
+                </view>
+              </view>
+            </view>
+            
+            <view class="action-btn export" bindtap="exportOrderImage" data-orderid="{{order.id}}">
+              <text>订单</text>
+            </view>
+            <view class="action-btn export-shipping" bindtap="exportShippingList" data-orderid="{{order.id}}">
+              <text>发货单</text>
+            </view>
+            <view class="action-btn tracking-btn" bindtap="editTrackingNumber" data-orderid="{{order.id}}" wx:if="{{order.status === '已发货'}}">
+              <text>快递单号</text>
+            </view>
+            
+            <!-- 状态更新按钮 - 最右侧 -->
+            <view class="action-btn status-update" bindtap="updateOrderStatus" data-orderid="{{order.id}}" data-current-status="{{order.status}}" wx:if="{{order.status === '待付款'}}">
+              <text>确认付款</text>
+            </view>
+            <view class="action-btn status-update" bindtap="updateOrderStatus" data-orderid="{{order.id}}" data-current-status="{{order.status}}" wx:if="{{order.status === '待发货'}}">
+              <text>确认发货</text>
+            </view>
+          </view>
         </view>
       </view>
     </view>
