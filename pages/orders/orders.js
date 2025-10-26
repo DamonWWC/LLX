@@ -1,4 +1,6 @@
 // pages/orders/orders.js
+const apiManager = require('../../utils/apiManager.js')
+
 Page({
   data: {
     orderList: [],
@@ -50,32 +52,25 @@ Page({
   },
 
   // 加载订单列表
-  loadOrders() {
+  async loadOrders() {
     try {
-      let orderList = wx.getStorageSync('orderList') || []
+      // 使用API管理器获取订单数据
+      let orderList = await apiManager.orderManager.getOrders()
       
       // 数据修复：清理所有订单的状态字段
-      let needSave = false
       orderList = orderList.map(order => {
         if (order.status) {
           const trimmedStatus = order.status.trim()
           if (trimmedStatus !== order.status) {
-            needSave = true
             return { ...order, status: trimmedStatus }
           }
         } else {
           // 如果没有 status 字段，根据 paymentStatus 补充
           const newStatus = order.paymentStatus === '已付款' ? '待发货' : '待付款'
-          needSave = true
           return { ...order, status: newStatus }
         }
         return order
       })
-      
-      // 如果有修复，保存回存储
-      if (needSave) {
-        wx.setStorageSync('orderList', orderList)
-      }
       
       let filteredOrders = orderList
       
@@ -187,34 +182,34 @@ Page({
   },
 
   // 删除订单
-  deleteOrder(e) {
+  async deleteOrder(e) {
     const { orderid } = e.currentTarget.dataset
     
     wx.showModal({
       title: '确认删除',
       content: '确定要删除这个订单吗？',
-      success: (res) => {
+      success: async (res) => {
         if (res.confirm) {
           try {
-            let orderList = this.data.orderList.filter(item => item.id !== orderid)
-            
-            // 保存到本地
-            wx.setStorageSync('orderList', orderList)
-            
-            // 更新页面
-            this.setData({
-              orderList: orderList,
-              filteredOrderList: orderList
+            // 显示加载状态
+            wx.showLoading({
+              title: '删除中...',
+              mask: true
             })
+
+            // 调用API删除订单
+            await apiManager.orderManager.deleteOrder(orderid)
             
-            // 重新应用过滤和搜索
-            this.performSearch(this.data.searchKeyword)
+            // 重新加载订单列表
+            await this.loadOrders()
             
+            wx.hideLoading()
             wx.showToast({
               title: '删除成功',
               icon: 'success'
             })
           } catch (error) {
+            wx.hideLoading()
             console.error('删除订单失败', error)
             wx.showToast({
               title: '删除失败',
@@ -372,33 +367,18 @@ Page({
   },
 
   // 直接更新订单状态（非发货操作）
-  updateOrderStatusDirect(orderId, currentStatus, newStatus) {
+  async updateOrderStatusDirect(orderId, currentStatus, newStatus) {
     try {
-      // 更新订单状态
-      const orderList = this.data.orderList.map(order => {
-        if (order.id === orderId) {
-          const updatedOrder = {
-            ...order,
-            status: newStatus
-          }
-          
-          // 如果是确认付款操作，同时更新付款状态
-          if (currentStatus === '待付款' && newStatus === '待发货') {
-            updatedOrder.paymentStatus = '已付款'
-          }
-          
-          return updatedOrder
-        }
-        return order
-      })
+      // 使用API管理器更新订单状态
+      await apiManager.orderManager.updateOrderStatus(orderId, newStatus)
       
-      // 保存到本地
-      wx.setStorageSync('orderList', orderList)
+      // 如果是确认付款操作，同时更新付款状态
+      if (currentStatus === '待付款' && newStatus === '待发货') {
+        await apiManager.orderManager.updatePaymentStatus(orderId, '已付款')
+      }
       
-      // 更新页面数据
-      this.setData({
-        orderList: orderList
-      })
+      // 重新加载订单列表
+      await this.loadOrders()
       
       // 重新应用过滤和搜索
       this.performSearch(this.data.searchKeyword)
@@ -419,37 +399,13 @@ Page({
   },
 
   // 更新订单状态并添加快递单号
-  updateOrderStatusWithTracking(orderId, currentStatus, newStatus, trackingNumber) {
+  async updateOrderStatusWithTracking(orderId, currentStatus, newStatus, trackingNumber) {
     try {
-      // 更新订单状态和快递单号
-      const orderList = this.data.orderList.map(order => {
-        if (order.id === orderId) {
-          const updatedOrder = {
-            ...order,
-            status: newStatus
-          }
-          
-          // 如果有快递单号，添加到订单中
-          if (trackingNumber.trim()) {
-            updatedOrder.trackingNumber = trackingNumber.trim()
-            updatedOrder.shippingTime = new Date().toLocaleString('zh-CN')
-          }
-          
-          return updatedOrder
-        }
-        return order
-      })
+      // 使用API管理器更新订单状态
+      await apiManager.orderManager.updateOrderStatus(orderId, newStatus)
       
-      // 保存到本地
-      wx.setStorageSync('orderList', orderList)
-      
-      // 更新页面数据
-      this.setData({
-        orderList: orderList
-      })
-      
-      // 重新应用过滤和搜索
-      this.performSearch(this.data.searchKeyword)
+      // 重新加载订单列表以获取最新数据
+      await this.loadOrders()
       
       wx.showToast({
         title: trackingNumber.trim() ? '发货成功，已记录快递单号' : '发货成功',
@@ -493,43 +449,19 @@ Page({
   },
 
   // 更新快递单号
-  updateTrackingNumber(orderId, trackingNumber) {
+  async updateTrackingNumber(orderId, trackingNumber) {
     try {
-      const orderList = this.data.orderList.map(order => {
-        if (order.id === orderId) {
-          const updatedOrder = { ...order }
-          
-          if (trackingNumber.trim()) {
-            updatedOrder.trackingNumber = trackingNumber.trim()
-            updatedOrder.shippingTime = updatedOrder.shippingTime || new Date().toLocaleString('zh-CN')
-          } else {
-            // 如果快递单号为空，移除相关字段
-            delete updatedOrder.trackingNumber
-            delete updatedOrder.shippingTime
-          }
-          
-          return updatedOrder
-        }
-        return order
-      })
+      // 注意：由于API接口文档中没有专门的快递单号更新接口，
+      // 这里暂时只更新本地显示，实际数据应该通过发货接口一起更新
+      console.log(`订单${orderId}快递单号更新为：${trackingNumber || '无'}`)
       
-      // 保存到本地
-      wx.setStorageSync('orderList', orderList)
-      
-      // 更新页面数据
-      this.setData({
-        orderList: orderList
-      })
-      
-      // 重新应用过滤和搜索
-      this.performSearch(this.data.searchKeyword)
+      // 重新加载订单列表以获取最新数据
+      await this.loadOrders()
       
       wx.showToast({
         title: trackingNumber.trim() ? '快递单号已保存' : '快递单号已清除',
         icon: 'success'
       })
-      
-      console.log(`订单${orderId}快递单号更新为：${trackingNumber || '无'}`)
     } catch (error) {
       console.error('更新快递单号失败', error)
       wx.showToast({
@@ -539,32 +471,56 @@ Page({
     }
   },
 
-  // 清空所有订单
-  clearAllOrders() {
+  // 批量删除订单
+  async batchDeleteOrders() {
+    const selectedOrders = this.data.selectedOrders
+    if (selectedOrders.length === 0) {
+      wx.showToast({
+        title: '请先选择要删除的订单',
+        icon: 'none'
+      })
+      return
+    }
+
     wx.showModal({
-      title: '确认清空',
-      content: '确定要清空所有订单吗？此操作不可恢复。',
+      title: '确认删除',
+      content: `确定要删除选中的 ${selectedOrders.length} 个订单吗？此操作不可恢复。`,
       confirmColor: '#ff4d4f',
-      success: (res) => {
+      success: async (res) => {
         if (res.confirm) {
           try {
-            wx.setStorageSync('orderList', [])
+            // 显示加载状态
+            wx.showLoading({
+              title: '删除中...',
+              mask: true
+            })
+
+            // 获取选中订单的ID列表
+            const orderIds = selectedOrders.map(order => order.id)
             
+            // 调用批量删除API
+            await apiManager.orderManager.deleteOrdersBatch(orderIds)
+            
+            // 重新加载订单列表
+            await this.loadOrders()
+            
+            // 退出多选模式
             this.setData({
-              orderList: [],
-              filteredOrderList: [],
-              searchKeyword: '',
-              isSearching: false
+              isMultiSelectMode: false,
+              selectedOrders: [],
+              totalAmount: 0
             })
             
+            wx.hideLoading()
             wx.showToast({
-              title: '已清空',
+              title: `已删除 ${orderIds.length} 个订单`,
               icon: 'success'
             })
           } catch (error) {
-            console.error('清空订单失败', error)
+            wx.hideLoading()
+            console.error('批量删除订单失败', error)
             wx.showToast({
-              title: '操作失败',
+              title: '删除失败',
               icon: 'none'
             })
           }

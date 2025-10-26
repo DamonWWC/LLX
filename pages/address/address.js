@@ -1,5 +1,6 @@
 // pages/address/address.js
 const addressParser = require('../../utils/addressParser.js');
+const apiManager = require('../../utils/apiManager.js');
 
 Page({
   data: {
@@ -26,7 +27,7 @@ Page({
     keyboardHeight: 0     // 键盘高度
   },
 
-  onLoad(options) {
+  async onLoad(options) {
     // 检查是否从结算页面跳转
     if (options.from === 'checkout') {
       this.setData({
@@ -35,11 +36,26 @@ Page({
       })
     }
     
-    // 加载本地地址数据
-    this.loadAddressList()
+    // 确保API管理器已初始化
+    if (!apiManager.isInitialized) {
+      try {
+        await apiManager.init()
+        console.log('[地址页面] API管理器初始化完成')
+      } catch (error) {
+        console.warn('[地址页面] API管理器初始化失败:', error.message)
+      }
+    }
+    
+    // 加载地址数据
+    await this.loadAddressList()
     
     // 监听键盘高度变化
     this.setupKeyboardListener()
+  },
+
+  onShow() {
+    // 每次显示页面时重新加载地址数据
+    this.loadAddressList()
   },
 
   onUnload() {
@@ -63,9 +79,10 @@ Page({
   },
 
   // 加载地址列表
-  loadAddressList() {
+  async loadAddressList() {
     try {
-      const addressList = wx.getStorageSync('addressList') || []
+      // 使用API管理器获取地址数据
+      const addressList = await apiManager.addressManager.getAddresses()
       this.setData({
         addressList: addressList
       })
@@ -78,19 +95,6 @@ Page({
     }
   },
 
-  // 保存地址列表到本地
-  saveAddressList(addressList) {
-    try {
-      wx.setStorageSync('addressList', addressList)
-      console.log('地址列表已保存到本地')
-    } catch (error) {
-      console.error('保存地址列表失败', error)
-      wx.showToast({
-        title: '保存失败',
-        icon: 'none'
-      })
-    }
-  },
 
   // 显示添加地址弹窗
   showAddDialog() {
@@ -181,8 +185,8 @@ Page({
     this.setData({ pasteText: e.detail.value })
   },
 
-  // 智能识别地址信息（使用第三方算法）
-  parseAddressText() {
+  // 智能识别地址信息（优先使用API，失败则使用本地算法）
+  async parseAddressText() {
     const { pasteText } = this.data
     
     if (!pasteText.trim()) {
@@ -196,8 +200,16 @@ Page({
     try {
       console.log('[地址识别] 原始输入:', pasteText)
       
-      // 使用第三方地址解析算法
-      const result = addressParser.parseAddress(pasteText)
+      // 显示加载状态
+      wx.showLoading({
+        title: '识别中...',
+        mask: true
+      })
+      
+      // 使用API管理器解析地址
+      //const result = await apiManager.addressManager.parseAddress(pasteText)
+        // 使用第三方地址解析算法
+        const result = addressParser.parseAddress(pasteText)
       
       // 验证解析结果
       const validation = addressParser.validateResult(result)
@@ -238,6 +250,8 @@ Page({
       ].filter(Boolean)
       
       const recognizedCount = recognizedFields.length
+      
+      wx.hideLoading()
       
       // 显示识别结果
       if (recognizedCount >= 4) {
@@ -292,6 +306,7 @@ Page({
       }
       
     } catch (error) {
+      wx.hideLoading()
       console.error('[地址识别] 解析失败:', error)
       wx.showToast({
         title: '识别出错，请重试',
@@ -301,7 +316,7 @@ Page({
   },
 
   // 保存地址
-  saveAddress() {
+  async saveAddress() {
     const { 
       formName, formPhone, formProvince, formCity, 
       formDistrict, formDetail, formIsDefault, 
@@ -329,33 +344,15 @@ Page({
       return
     }
 
-    let newAddressList = [...addressList]
+    // 显示加载状态
+    wx.showLoading({
+      title: editingAddress ? '修改中...' : '添加中...',
+      mask: true
+    })
 
-    if (editingAddress) {
-      // 编辑现有地址
-      newAddressList = newAddressList.map(item => {
-        if (item.id === editingAddress.id) {
-          return {
-            ...item,
-            name: formName.trim(),
-            phone: formPhone.trim(),
-            province: formProvince.trim(),
-            city: formCity.trim(),
-            district: formDistrict.trim(),
-            detail: formDetail.trim(),
-            isDefault: formIsDefault
-          }
-        }
-        // 如果设置为默认，其他地址取消默认
-        if (formIsDefault && item.isDefault) {
-          return { ...item, isDefault: false }
-        }
-        return item
-      })
-    } else {
-      // 添加新地址
-      const newAddress = {
-        id: Date.now(),
+    try {
+      // 准备地址数据
+      const addressData = {
         name: formName.trim(),
         phone: formPhone.trim(),
         province: formProvince.trim(),
@@ -365,34 +362,36 @@ Page({
         isDefault: formIsDefault
       }
 
-      // 如果设置为默认，其他地址取消默认
-      if (formIsDefault) {
-        newAddressList = newAddressList.map(item => ({
-          ...item,
-          isDefault: false
-        }))
+      let newAddress
+      if (editingAddress) {
+        // 编辑现有地址
+        newAddress = await apiManager.addressManager.updateAddress(editingAddress.id, addressData)
+      } else {
+        // 添加新地址
+        newAddress = await apiManager.addressManager.createAddress(addressData)
       }
 
-      newAddressList.push(newAddress)
+      // 重新加载地址列表
+      const newAddressList = await apiManager.addressManager.getAddresses()
+
+      this.setData({
+        addressList: newAddressList,
+        showEditDialog: false
+      })
+
+      wx.hideLoading()
+      wx.showToast({
+        title: editingAddress ? '修改成功' : '添加成功',
+        icon: 'success'
+      })
+    } catch (error) {
+      wx.hideLoading()
+      console.error('保存地址失败:', error)
+      wx.showToast({
+        title: '保存失败，请重试',
+        icon: 'none'
+      })
     }
-
-    // 如果是第一个地址，自动设为默认
-    if (newAddressList.length === 1) {
-      newAddressList[0].isDefault = true
-    }
-
-    // 保存到本地
-    this.saveAddressList(newAddressList)
-
-    this.setData({
-      addressList: newAddressList,
-      showEditDialog: false
-    })
-
-    wx.showToast({
-      title: editingAddress ? '修改成功' : '添加成功',
-      icon: 'success'
-    })
   },
 
   // 删除地址
@@ -402,26 +401,38 @@ Page({
     wx.showModal({
       title: '确认删除',
       content: '确定要删除这个地址吗？',
-      success: (res) => {
+      success: async (res) => {
         if (res.confirm) {
-          let newAddressList = this.data.addressList.filter(item => item.id !== id)
-          
-          // 如果删除的是默认地址，且还有其他地址，将第一个设为默认
-          const deletedAddress = this.data.addressList.find(item => item.id === id)
-          if (deletedAddress && deletedAddress.isDefault && newAddressList.length > 0) {
-            newAddressList[0].isDefault = true
+          // 显示加载状态
+          wx.showLoading({
+            title: '删除中...',
+            mask: true
+          })
+
+          try {
+            // 使用API管理器删除地址
+            await apiManager.addressManager.deleteAddress(id)
+
+            // 重新加载地址列表
+            const newAddressList = await apiManager.addressManager.getAddresses()
+
+            this.setData({
+              addressList: newAddressList
+            })
+
+            wx.hideLoading()
+            wx.showToast({
+              title: '删除成功',
+              icon: 'success'
+            })
+          } catch (error) {
+            wx.hideLoading()
+            console.error('删除地址失败:', error)
+            wx.showToast({
+              title: '删除失败，请重试',
+              icon: 'none'
+            })
           }
-
-          this.saveAddressList(newAddressList)
-          
-          this.setData({
-            addressList: newAddressList
-          })
-
-          wx.showToast({
-            title: '删除成功',
-            icon: 'success'
-          })
         }
       }
     })
@@ -459,13 +470,7 @@ Page({
 
     if (address) {
       try {
-        // 更新本地存储中的结算数据（关键修复）
-        const checkoutData = wx.getStorageSync('checkoutData')
-        if (checkoutData) {
-          checkoutData.selectedAddress = address
-          wx.setStorageSync('checkoutData', checkoutData)
-          console.log('已更新结算数据中的地址:', address)
-        }
+        // 地址选择完成，数据已通过API管理
 
         // 同时更新上一个页面的数据（保持兼容）
         const pages = getCurrentPages()

@@ -146,13 +146,9 @@
       <text class="selected-count">已选择 {{selectedOrders.length}} 个订单</text>
       <text class="total-amount">合计：¥{{totalAmount}}</text>
     </view>
-  </view>
-
-  <!-- 底部清空按钮 -->
-  <view class="bottom-bar" wx:if="{{orderList.length > 0 && !isMultiSelectMode}}">
-    <button class="clear-all-btn" bindtap="clearAllOrders">
+    <button class="batch-delete-btn" bindtap="batchDeleteOrders">
       <text class="btn-icon">🗑️</text>
-      <text>清空所有订单</text>
+      <text>删除选中订单</text>
     </button>
   </view>
 

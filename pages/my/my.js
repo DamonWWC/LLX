@@ -1,4 +1,6 @@
 // pages/my/my.js
+const apiManager = require('../../utils/apiManager.js')
+
 Page({
   data: {
     // 订单状态统计
@@ -17,10 +19,19 @@ Page({
   },
 
   // 加载数据
-  loadData() {
+  async loadData() {
     try {
-      // 加载订单数据
-      const orderList = wx.getStorageSync('orderList') || []
+      // 显示加载状态
+      wx.showLoading({
+        title: '加载中...',
+        mask: true
+      })
+
+      // 并行加载订单和地址数据
+      const [orderList, addressList] = await Promise.all([
+        apiManager.orderManager.getOrders(),
+        apiManager.addressManager.getAddresses()
+      ])
       
       // 统计各状态订单数量
       let pendingPaymentCount = 0
@@ -41,9 +52,6 @@ Page({
         }
       })
       
-      // 加载地址数量
-      const addressList = wx.getStorageSync('shippingAddresses') || []
-      
       this.setData({
         pendingPaymentCount: pendingPaymentCount,
         pendingShippingCount: pendingShippingCount,
@@ -52,6 +60,7 @@ Page({
         addressCount: addressList.length
       })
       
+      wx.hideLoading()
       console.log('订单统计:', {
         待付款: pendingPaymentCount,
         待发货: pendingShippingCount,
@@ -60,7 +69,12 @@ Page({
       })
       console.log('地址数量', addressList.length, '个')
     } catch (error) {
+      wx.hideLoading()
       console.error('加载数据失败', error)
+      wx.showToast({
+        title: '加载失败',
+        icon: 'none'
+      })
     }
   },
 
