@@ -483,9 +483,9 @@ Page({
     try {
       // 使用API管理器更新订单状态
       await apiManager.orderManager.updateOrderStatus(orderId, newStatus)
-      
-      // 如果是确认付款操作，同时更新付款状态
-      if (currentStatus === '待付款' && newStatus === '待发货') {
+          
+          // 如果是确认付款操作，同时更新付款状态
+          if (currentStatus === '待付款' && newStatus === '待发货') {
         await apiManager.orderManager.updatePaymentStatus(orderId, '已付款')
       }
       

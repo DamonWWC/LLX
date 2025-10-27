@@ -208,8 +208,8 @@ Page({
       
       // 使用API管理器解析地址
       //const result = await apiManager.addressManager.parseAddress(pasteText)
-        // 使用第三方地址解析算法
-        const result = addressParser.parseAddress(pasteText)
+      // 使用第三方地址解析算法
+      const result = addressParser.parseAddress(pasteText)
       
       // 验证解析结果
       const validation = addressParser.validateResult(result)
@@ -374,16 +374,16 @@ Page({
       // 重新加载地址列表
       const newAddressList = await apiManager.addressManager.getAddresses()
 
-      this.setData({
-        addressList: newAddressList,
-        showEditDialog: false
-      })
+    this.setData({
+      addressList: newAddressList,
+      showEditDialog: false
+    })
 
       wx.hideLoading()
-      wx.showToast({
-        title: editingAddress ? '修改成功' : '添加成功',
-        icon: 'success'
-      })
+    wx.showToast({
+      title: editingAddress ? '修改成功' : '添加成功',
+      icon: 'success'
+    })
     } catch (error) {
       wx.hideLoading()
       console.error('保存地址失败:', error)
@@ -415,16 +415,16 @@ Page({
 
             // 重新加载地址列表
             const newAddressList = await apiManager.addressManager.getAddresses()
-
-            this.setData({
-              addressList: newAddressList
-            })
+          
+          this.setData({
+            addressList: newAddressList
+          })
 
             wx.hideLoading()
-            wx.showToast({
-              title: '删除成功',
-              icon: 'success'
-            })
+          wx.showToast({
+            title: '删除成功',
+            icon: 'success'
+          })
           } catch (error) {
             wx.hideLoading()
             console.error('删除地址失败:', error)
