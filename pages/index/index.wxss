@@ -235,8 +235,9 @@ page {
   font-size: 48rpx;
   font-weight: bold;
   color: #ff6034;
-  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica,
-    Arial, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial,
+    sans-serif;
   line-height: 1;
 }
 
@@ -673,8 +674,9 @@ page {
   font-size: 30rpx;
   color: #333333;
   font-weight: 600;
-  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica,
-    Arial, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial,
+    sans-serif;
 }
 
 .result-divider {
@@ -702,8 +704,9 @@ page {
 .summary-value {
   color: #333333;
   font-weight: 500;
-  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica,
-    Arial, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial,
+    sans-serif;
 }
 
 .summary-row.total {
@@ -918,8 +921,10 @@ page {
   background-color: #f7f8fa;
   border: 2rpx solid #e5e5e5;
   border-radius: 16rpx;
-  padding: 24rpx 28rpx;
-  font-size: 28rpx;
+  padding: 26rpx 28rpx;
+  font-size: 30rpx;
+  line-height: 44rpx;
+  height: 96rpx;
   width: 100%;
   box-sizing: border-box;
   transition: all 0.3s;
